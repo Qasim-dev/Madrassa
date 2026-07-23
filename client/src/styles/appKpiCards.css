@@ -1,0 +1,235 @@
+/* ═══════════════════════════════════════════════════════════════
+   App-wide KPI / stat cards — flat premium SaaS style
+   White card, hairline border, dark value, tonal icon chip.
+   ═══════════════════════════════════════════════════════════════ */
+
+.app-kpi-grid {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.app-kpi-grid--cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-kpi-grid--cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.app-kpi-grid--cols-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.app-kpi-grid--auto {
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .app-kpi-grid:not(.app-kpi-grid--auto):not(.app-kpi-grid--cols-2):not(.app-kpi-grid--cols-3) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .app-kpi-grid--cols-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .app-kpi-grid,
+  .app-kpi-grid--cols-2,
+  .app-kpi-grid--cols-3,
+  .app-kpi-grid--cols-5,
+  .app-kpi-grid--auto {
+    grid-template-columns: 1fr;
+  }
+}
+
+.app-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border-radius: var(--theme-radius-card, 1.1rem);
+  padding: 1.05rem 1.15rem;
+  border: 1px solid var(--app-border, #eae9e4);
+  background: var(--app-surface, #fff);
+  box-shadow: var(--app-shadow-card, 0 1px 2px rgba(16, 24, 40, 0.04));
+  min-height: 5.5rem;
+  width: 100%;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  appearance: none;
+  text-decoration: none;
+}
+
+.app-kpi-card--clickable {
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.app-kpi-card--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--theme-card-shadow-hover, 0 6px 16px -6px rgba(16, 24, 40, 0.1));
+  border-color: var(--app-border-strong, #dcdbd4);
+}
+
+.app-kpi-card--clickable:active {
+  transform: translateY(0);
+}
+
+.app-kpi-card--clickable:focus-visible {
+  outline: 2px solid var(--app-primary, #0f8f5f);
+  outline-offset: 2px;
+}
+
+.app-kpi-card--skeleton {
+  min-height: 5.5rem;
+  background: linear-gradient(90deg, #f4f4f1 25%, #eae9e4 50%, #f4f4f1 75%);
+  background-size: 200% 100%;
+  animation: app-kpi-shimmer 1.2s infinite;
+  border-color: var(--app-border, #eae9e4);
+}
+
+@keyframes app-kpi-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Featured — flat deep green card */
+.app-kpi-card--featured {
+  background: var(--app-gradient-hero, #0f8f5f);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 18px -6px rgba(11, 110, 73, 0.4);
+  color: #fff;
+}
+
+.app-kpi-card--featured:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 10px 24px -8px rgba(11, 110, 73, 0.5);
+}
+
+/* Icon chip — the only tonal element on the card */
+.app-kpi-card__icon {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: rgba(15, 143, 95, 0.1);
+  color: #0b6e49;
+}
+
+.app-kpi-card__icon svg,
+.app-kpi-card__icon .dashboard-tile__icon-svg,
+.app-kpi-card__icon .nav-icon-svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.app-kpi-card--amber .app-kpi-card__icon,
+.app-kpi-card--orange .app-kpi-card__icon,
+.app-kpi-card--warn .app-kpi-card__icon {
+  background: var(--ds-warning-soft, rgba(217, 119, 6, 0.12));
+  color: var(--ds-warning, #d97706);
+}
+
+.app-kpi-card--blue .app-kpi-card__icon,
+.app-kpi-card--cyan .app-kpi-card__icon,
+.app-kpi-card--sky .app-kpi-card__icon,
+.app-kpi-card--balance .app-kpi-card__icon {
+  background: var(--ds-info-soft, rgba(2, 132, 199, 0.12));
+  color: var(--ds-info, #0284c7);
+}
+
+.app-kpi-card--rose .app-kpi-card__icon,
+.app-kpi-card--expense .app-kpi-card__icon,
+.app-kpi-card--danger .app-kpi-card__icon {
+  background: var(--ds-danger-soft, rgba(220, 38, 38, 0.1));
+  color: var(--ds-danger, #dc2626);
+}
+
+.app-kpi-card--violet .app-kpi-card__icon,
+.app-kpi-card--indigo .app-kpi-card__icon {
+  background: var(--ds-secondary-soft, #f1f1ed);
+  color: var(--ds-secondary, #6f7480);
+}
+
+.app-kpi-card--slate .app-kpi-card__icon {
+  background: var(--ds-bg-subtle, #f1f1ed);
+  color: var(--ds-text-secondary, #44474f);
+}
+
+.app-kpi-card--income .app-kpi-card__icon,
+.app-kpi-card--emerald .app-kpi-card__icon,
+.app-kpi-card--net .app-kpi-card__icon,
+.app-kpi-card--teal .app-kpi-card__icon {
+  background: var(--ds-primary-soft, rgba(15, 143, 95, 0.09));
+  color: var(--app-primary-dark, #0b6e49);
+}
+
+.app-kpi-card--featured .app-kpi-card__icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.app-kpi-card__body {
+  min-width: 0;
+  flex: 1;
+}
+
+/* Value — always dark charcoal (screenshot style), tabular numerals */
+.app-kpi-card__value {
+  font-size: 1.55rem;
+  font-weight: 750;
+  line-height: 1.1;
+  color: var(--app-text, #17181c);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-kpi-card--featured .app-kpi-card__value,
+.app-kpi-card--featured .app-kpi-card__label,
+.app-kpi-card--featured .app-kpi-card__hint,
+.app-kpi-card--featured .app-kpi-card__action {
+  color: #fff;
+}
+
+.app-kpi-card--featured .app-kpi-card__label,
+.app-kpi-card--featured .app-kpi-card__hint {
+  opacity: 0.85;
+}
+
+.app-kpi-card__label {
+  font-size: 0.78rem;
+  color: var(--app-text-muted, #6f7480);
+  margin-top: 0.2rem;
+  line-height: 1.35;
+  font-weight: 550;
+}
+
+.app-kpi-card__hint,
+.app-kpi-card__action {
+  font-size: 0.72rem;
+  color: var(--app-text-subtle, #9aa0ab);
+  margin-top: 0.15rem;
+  line-height: 1.3;
+}
+
+.app-kpi-card--clickable:hover .app-kpi-card__action {
+  color: var(--app-primary, #0f8f5f);
+}
+
+.app-kpi-card--featured.app-kpi-card--clickable:hover .app-kpi-card__action {
+  color: rgba(255, 255, 255, 0.95);
+}

@@ -1,0 +1,1453 @@
+/* ═══════════════════════════════════════════════════════════════
+   E-Jamia Pro — UI primitives (modern pill inputs, floating labels)
+   Inspired by soft rounded form controls — mint primary palette
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --ui-field-radius: var(--theme-field-radius, 14px);
+  --ui-field-radius-pill: var(--theme-field-radius-pill, 18px);
+  --ui-field-height: var(--theme-field-height, 2.75rem);
+  --ui-field-pad-x: var(--theme-field-pad-x, 0.875rem);
+  --ui-field-pad-y: var(--theme-field-pad-y, 0.4rem);
+  --ui-field-font-size: var(--theme-field-font-size, 0.875rem);
+  --ui-field-line-height: var(--theme-field-line-height, 1.45);
+  --ui-field-border: var(--theme-field-border, #d9e2df);
+  --ui-field-bg: var(--theme-field-bg, #ffffff);
+  --ui-field-shadow: var(--theme-field-shadow, 0 1px 2px rgba(15, 23, 42, 0.035));
+  --ui-field-shadow-focus: var(--theme-field-shadow-focus, 0 0 0 3px rgba(13, 92, 77, 0.14));
+  --ui-field-error: var(--ds-danger, #dc2626);
+  --ui-field-error-soft: var(--ds-danger-soft, rgba(220, 38, 38, 0.1));
+  --ui-field-error-ring: rgba(220, 38, 38, 0.2);
+  --ui-text-primary: var(--theme-text, #1F2937);
+  --ui-text-secondary: var(--theme-text-muted, #6B7280);
+  --ui-text-placeholder: var(--theme-text-placeholder, #9CA3AF);
+  --ui-success: var(--ds-success, #059669);
+  --ui-form-label-gap: var(--ds-form-label-gap, 0.4rem);
+  --ui-form-field-gap: var(--ds-form-field-gap, 0.85rem);
+}
+
+@media (max-width: 768px) {
+  :root {
+    --ui-field-height: var(--theme-field-height-mobile, 2.625rem);
+    --btn-height: var(--ui-field-height);
+  }
+}
+
+/* ─── Buttons ───────────────────────────────────────────────── */
+
+.app-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: var(--btn-height, var(--ui-field-height));
+  height: var(--btn-height, var(--ui-field-height));
+  padding: 0 var(--btn-pad-x, 0.875rem);
+  font-size: var(--btn-font, 0.8125rem);
+  border: 1px solid transparent;
+  border-radius: var(--ui-field-radius);
+  font-weight: 600;
+  line-height: 1.65;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.1s ease;
+}
+
+.app-btn:disabled,
+.app-btn.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.app-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--app-primary-ring);
+}
+
+.app-btn--sm,
+.app-btn--md {
+  min-height: var(--btn-height, var(--ui-field-height));
+  height: var(--btn-height, var(--ui-field-height));
+  padding: 0 var(--btn-pad-x, 0.875rem);
+  font-size: var(--btn-font, 0.8125rem);
+  border-radius: var(--ui-field-radius);
+  line-height: 1.25;
+}
+
+html[dir='rtl'] .app-btn,
+body[data-ui-lang='ur'] .app-btn {
+  line-height: 1.25;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.app-btn--lg {
+  min-height: var(--btn-lg-height);
+  padding: var(--btn-lg-pad-y) var(--btn-lg-pad-x);
+  font-size: var(--btn-lg-font);
+  border-radius: var(--btn-radius);
+}
+
+.app-btn--primary,
+.app-btn--success {
+  color: #fff;
+  background: var(--app-primary);
+  border-color: var(--app-primary);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+
+.app-btn--primary:hover:not(:disabled),
+.app-btn--success:hover:not(:disabled) {
+  background: var(--app-primary-hover);
+  border-color: var(--app-primary-hover);
+  box-shadow: 0 2px 6px rgba(15, 143, 95, 0.24);
+}
+
+.app-btn--secondary,
+.app-btn--outline-secondary {
+  color: var(--theme-text);
+  background: #fff;
+  border-color: var(--theme-border);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.app-btn--secondary:hover:not(:disabled),
+.app-btn--outline-secondary:hover:not(:disabled) {
+  background: var(--theme-primary-soft);
+  border-color: rgba(15, 143, 95, 0.26);
+  color: var(--theme-primary);
+}
+
+.app-btn--danger {
+  color: #fff;
+  background: #dc2626;
+  border-color: #dc2626;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+
+.app-btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.app-btn--outline-primary {
+  color: var(--app-primary-dark);
+  background: var(--app-surface);
+  border-color: rgba(38, 186, 153, 0.5);
+}
+
+.app-btn--outline-primary:hover:not(:disabled) {
+  background: var(--app-primary-soft);
+  border-color: var(--app-primary);
+}
+
+.app-btn--outline-danger {
+  color: #b91c1c;
+  background: var(--app-surface);
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.app-btn--outline-danger:hover:not(:disabled) {
+  background: var(--ui-field-error-soft);
+}
+
+.app-btn--ghost {
+  color: var(--app-secondary);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.app-btn--ghost:hover:not(:disabled) {
+  color: var(--app-primary-dark);
+  background: var(--app-primary-soft);
+}
+
+.app-btn--block {
+  width: 100%;
+}
+
+.app-btn__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* ─── Field layout ──────────────────────────────────────────── */
+
+.app-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-form-label-gap, 0.4rem);
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.app-field__shell {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Label ABOVE input — never crop Nastaliq descenders */
+.app-field__float-label,
+.app-field > .bilingual-label {
+  display: block;
+  margin: 0 !important;
+  padding: 0.05rem 0 0.15rem !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  font-size: var(--ds-text-label, 0.8125rem) !important;
+  font-weight: 600 !important;
+  line-height: var(--ds-label-line-height, 1.7) !important;
+  color: var(--ui-text-secondary) !important;
+  pointer-events: none;
+  max-width: 100%;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  transition: color 0.18s ease;
+}
+
+html[dir='rtl'] .app-field__float-label,
+html[dir='rtl'] .app-field > .bilingual-label,
+body[data-ui-lang='ur'] .app-field__float-label,
+body[data-ui-lang='ur'] .app-field > .bilingual-label {
+  line-height: var(--ds-label-line-height-urdu, 1.95) !important;
+  padding-bottom: 0.2rem !important;
+}
+
+.app-field__float-label .bilingual-label__text,
+.app-field > .bilingual-label .bilingual-label__text {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  color: inherit !important;
+  line-height: inherit !important;
+}
+
+.app-field__required,
+.app-field__float-label .text-danger {
+  color: var(--ui-field-error) !important;
+  margin-inline-start: 0.25rem;
+}
+
+.app-field:focus-within > .app-field__float-label,
+.app-field:focus-within > .bilingual-label {
+  color: var(--app-text) !important;
+}
+
+.app-field--error > .app-field__float-label,
+.app-field--error > .bilingual-label {
+  color: var(--ui-field-error) !important;
+}
+
+.app-field--valid > .app-field__float-label,
+.app-field--valid > .bilingual-label {
+  color: var(--app-text-muted) !important;
+}
+
+/* ─── Controls (pill inputs) ────────────────────────────────── */
+
+.app-field__control {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--ui-field-border);
+  border-radius: var(--ui-field-radius);
+  background: var(--ui-field-bg);
+  color: var(--ui-text-primary);
+  font-family: inherit;
+  line-height: var(--ui-field-line-height);
+  box-shadow: var(--ui-field-shadow);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.app-field__control::placeholder {
+  color: var(--ui-text-placeholder);
+  opacity: 1;
+}
+
+.app-field__control:hover:not(:disabled):not(:read-only) {
+  border-color: rgba(38, 186, 153, 0.3);
+  background: var(--ui-field-bg);
+}
+
+.app-field__control:focus {
+  outline: none;
+  border-color: var(--app-primary);
+  background: var(--ui-field-bg);
+  box-shadow: var(--ui-field-shadow-focus);
+}
+
+.app-field__control:disabled,
+.app-field__control[aria-disabled='true'] {
+  background: #F3F4F6;
+  color: var(--ui-text-secondary);
+  cursor: not-allowed;
+  opacity: 0.9;
+  border-color: var(--ui-field-border);
+}
+
+.app-field__control--sm:not(.app-field__control--textarea),
+.app-field__control--md:not(.app-field__control--textarea) {
+  min-height: var(--ui-field-height);
+  height: var(--ui-field-height);
+  max-height: var(--ui-field-height);
+  padding: 0 var(--ui-field-pad-x);
+  font-size: var(--ui-field-font-size);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+/* Nastaliq: keep text readable inside the shared field height (no extra vertical growth) */
+html[dir='rtl'] .app-field__control:not(.app-field__control--latin):not([type='file']),
+body[data-ui-lang='ur'] .app-field__control:not(.app-field__control--latin):not([type='file']) {
+  line-height: 1.45;
+  padding-top: 0;
+  padding-bottom: 0;
+  /* overflow: hidden; */
+}
+
+body[data-ui-lang='ur'] {
+  --ui-field-height: var(--theme-field-height, var(--ds-control-height-ur, 2.5rem));
+}
+
+.app-field__control--latin {
+  line-height: 1.45;
+}
+
+.app-field__shell--has-status .app-field__control {
+  padding-inline-end: 2.65rem;
+}
+
+/* Error / valid */
+.app-field__control--invalid,
+.app-field--error .app-field__control,
+.app-field__shell--invalid .app-field__control {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: var(--ui-field-error-soft);
+}
+
+.app-field__control--invalid:focus,
+.app-field--error .app-field__control:focus,
+.app-field__shell--invalid .app-field__control:focus {
+  box-shadow: 0 0 0 3px var(--ui-field-error-ring);
+}
+
+.app-field--valid .app-field__control:not(.app-field__control--invalid),
+.app-field__shell--valid .app-field__control {
+  border-color: rgba(38, 186, 153, 0.5);
+}
+
+.app-field__hint {
+  font-size: 0.75rem;
+  color: var(--app-text-muted);
+  line-height: 1.45;
+  padding-inline-start: 0.35rem;
+}
+
+body[data-ui-lang='ur'] .app-field__hint,
+html[dir='rtl'] .app-field__hint {
+  font-size: var(--ds-text-hint-ur, 0.8125rem);
+  line-height: var(--ds-leading-urdu, 1.85);
+  color: var(--ds-text-muted-strong, #64748b);
+}
+
+.app-field__error {
+  font-size: 0.75rem;
+  color: var(--ui-field-error);
+  line-height: 1.45;
+  padding-inline-start: 0.35rem;
+  font-weight: 500;
+}
+
+body[data-ui-lang='ur'] .app-field__error,
+html[dir='rtl'] .app-field__error {
+  font-size: var(--ds-text-hint-ur, 0.8125rem);
+  line-height: var(--ds-leading-urdu, 1.85);
+}
+
+.app-field__status {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 0.85rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+html[dir='rtl'] .app-field__control:not(.app-field__control--latin) {
+  font-family: var(--font-urdu);
+}
+
+.app-field__control--latin {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: var(--font-latin);
+  text-align: start;
+}
+
+/* Select chevron */
+.app-field__control--select {
+  appearance: none;
+  cursor: pointer;
+  padding-inline-end: 2.35rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+}
+
+html[dir='rtl'] .app-field__control--select {
+  background-position: left 1rem center;
+  padding-inline-start: 2.35rem;
+  padding-inline-end: 1rem;
+}
+
+.app-field__shell--has-status .app-field__control--select {
+  padding-inline-end: 2.65rem;
+}
+
+.app-field__control--select:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%2326ba99' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='m3 7.5 3-3 3 3'/%3E%3C/svg%3E");
+}
+
+.app-field__control--select option {
+  background: #fff;
+  color: var(--app-text);
+  padding: 0.5rem;
+}
+
+/* Date input wrapper + clear (X) control */
+.app-date-input-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: block;
+  min-height: var(--ui-field-height);
+}
+
+.app-date-input-wrap .app-date-input,
+.app-date-input-wrap .rmdp-container {
+  width: 100%;
+}
+
+.app-date-input__clear {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 0.5rem;
+  transform: translateY(-50%);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: var(--ui-text-secondary);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.app-date-input__clear:hover {
+  background: #fee2e2;
+  color: var(--ui-field-error);
+}
+
+.app-date-input__clear:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ui-field-error-ring);
+}
+
+/* Date field — fixed height + optically centered text (incl. Nastaliq) */
+.app-date-input .rmdp-input,
+.app-field__shell .app-date-input .rmdp-input,
+.rmdp-input.app-field__control {
+  width: 100% !important;
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  max-height: var(--ui-field-height) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding-block: 0 !important;
+  padding-inline: var(--ui-field-pad-x) !important;
+  border: 1px solid var(--ui-field-border) !important;
+  border-radius: var(--ui-field-radius) !important;
+  background: var(--ui-field-bg) !important;
+  box-shadow: var(--ui-field-shadow);
+  font-size: var(--ui-field-font-size) !important;
+  line-height: var(--ui-field-height) !important;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+html[dir='rtl'] .app-date-input .rmdp-input,
+html[dir='rtl'] .app-field__shell .app-date-input .rmdp-input,
+html[dir='rtl'] .rmdp-input.app-field__control,
+body[data-ui-lang='ur'] .app-date-input .rmdp-input,
+body[data-ui-lang='ur'] .rmdp-input.app-field__control {
+  line-height: 1.35 !important;
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.35rem !important;
+  font-family: var(--font-urdu);
+}
+
+.app-date-input .rmdp-input.app-date-input__field--has-clear,
+.app-field__shell .app-date-input .rmdp-input.app-date-input__field--has-clear {
+  padding-inline-end: 2.35rem !important;
+}
+
+.app-field__shell .app-date-input .rmdp-input:hover {
+  border-color: rgba(38, 186, 153, 0.3);
+  background: var(--ui-field-bg);
+}
+
+.app-field__shell .app-date-input .rmdp-input:focus,
+.app-date-input .rmdp-input:focus {
+  outline: none;
+  border-color: var(--app-primary) !important;
+  background: var(--ui-field-bg) !important;
+  box-shadow: var(--ui-field-shadow-focus);
+}
+
+/* Calendar popup — above modals; scroll only when taller than viewport */
+.rmdp-wrapper,
+.rmdp-container.rmdp-main,
+body > .rmdp-wrapper,
+body > div > .rmdp-calendar {
+  z-index: 12050 !important;
+}
+
+.rmdp-wrapper {
+  max-height: min(420px, calc(100dvh - 16px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rmdp-calendar,
+.app-rmdp-calendar.rmdp-calendar {
+  z-index: 12050 !important;
+  max-height: none;
+  overflow: visible;
+}
+
+textarea.app-field__control--textarea {
+  resize: vertical;
+  min-height: 5.5rem;
+  padding-top: 12px !important;
+}
+
+/* ─── Checkbox & Radio (custom) ─────────────────────────────── */
+
+.app-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+  min-height: var(--ui-field-height);
+  padding-block: 0.15rem;
+}
+
+.app-check--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.app-check__native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app-check__box {
+  position: relative;
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1.5px solid var(--ui-field-border);
+  border-radius: 5px;
+  background: var(--ui-field-bg);
+  box-shadow: var(--ui-field-shadow);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-check:hover:not(.app-check--disabled) .app-check__box {
+  border-color: var(--app-primary);
+  background: var(--ui-field-bg);
+}
+
+.app-check__native:focus-visible + .app-check__box {
+  outline: none;
+  box-shadow: var(--ui-field-shadow-focus);
+}
+
+.app-check__native:checked + .app-check__box {
+  background: var(--app-primary);
+  border-color: var(--app-primary);
+  box-shadow: 0 2px 8px rgba(38, 186, 153, 0.35);
+}
+
+.app-check__native:checked + .app-check__box::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+/* Radio variant */
+.app-check--radio .app-check__box {
+  border-radius: 50%;
+}
+
+.app-check--radio .app-check__native:checked + .app-check__box::after {
+  width: 8px;
+  height: 8px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  transform: none;
+  box-shadow: none;
+}
+
+.app-check--invalid .app-check__box {
+  border-color: var(--ui-field-error);
+  background: var(--ui-field-error-soft);
+}
+
+.app-check__label {
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--app-text);
+  padding-block: 0.1rem;
+}
+
+html[dir='rtl'] .app-check,
+body[data-ui-lang='ur'] .app-check {
+  align-items: center;
+}
+
+html[dir='rtl'] .app-check__label,
+body[data-ui-lang='ur'] .app-check__label {
+  line-height: 1.9;
+}
+
+html[dir='rtl'] .app-check__box,
+body[data-ui-lang='ur'] .app-check__box {
+  margin-top: 0.1rem;
+}
+
+.app-check--icon-only {
+  gap: 0;
+}
+
+.app-check--icon-only .app-check__box {
+  margin: 0 auto;
+}
+
+.app-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-radio-group--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.5rem;
+}
+
+.app-radio-group__legend {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  margin-bottom: 0.35rem;
+  padding: 0;
+}
+
+.app-radio-group--invalid .app-radio-group__legend {
+  color: var(--ui-field-error);
+}
+
+/* ─── Form layout ───────────────────────────────────────────── */
+
+.app-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-inline: -8px;
+  align-items: flex-start;
+}
+
+.app-form-row > .app-form-col {
+  padding-inline: 8px;
+  margin-bottom: 0.85rem;
+}
+
+.app-form-col--12 { flex: 0 0 100%; max-width: 100%; }
+.app-form-col--8 { flex: 0 0 100%; max-width: 100%; }
+.app-form-col--6 { flex: 0 0 100%; max-width: 100%; }
+.app-form-col--4 { flex: 0 0 100%; max-width: 100%; }
+.app-form-col--3 { flex: 0 0 100%; max-width: 100%; }
+
+@media (min-width: 768px) {
+  .app-form-col--8 { flex: 0 0 66.666%; max-width: 66.666%; }
+  .app-form-col--6 { flex: 0 0 50%; max-width: 50%; }
+  .app-form-col--4 { flex: 0 0 33.333%; max-width: 33.333%; }
+  .app-form-col--3 { flex: 0 0 25%; max-width: 25%; }
+}
+
+/* Always 2 equal fields on one row (dates, etc.) — ignores breakpoint stacking */
+.app-form-row.app-form-row--2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-inline: 0;
+  align-items: start;
+}
+
+.app-form-row.app-form-row--2 > .app-form-col {
+  flex: none;
+  max-width: none;
+  width: auto;
+  padding-inline: 0;
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+@media (max-width: 380px) {
+  .app-form-row.app-form-row--2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.app-form-section {
+  margin-bottom: 1.35rem;
+}
+
+.app-form-section:last-child {
+  margin-bottom: 0;
+}
+
+.modal-app-footer .app-btn + .app-btn {
+  margin-inline-start: 0;
+}
+
+/* Standalone controls (no FormField shell) still look modern */
+:not(.app-field__shell) > .app-field__control {
+  border-radius: var(--ui-field-radius);
+}
+
+/* ─── Global: all legacy Bootstrap fields → pill design ───────── */
+
+input.form-control:not(.app-field__control):not(.rmdp-input):not([type='file']):not([type='checkbox']):not([type='radio']),
+select.form-select:not(.app-field__control) {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  box-sizing: border-box;
+  padding: 0 var(--ui-field-pad-x) !important;
+  font-size: var(--ui-field-font-size);
+  line-height: 1.25;
+  border: 1px solid var(--ui-field-border) !important;
+  border-radius: var(--ui-field-radius) !important;
+  background: var(--ui-field-bg) !important;
+  color: var(--ui-text-primary);
+  box-shadow: var(--ui-field-shadow);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+input[type="file"].form-control,
+input[type="file"].app-field__control {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  max-height: var(--ui-field-height) !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  padding-inline-end: var(--ui-field-pad-x) !important;
+  display: flex !important;
+  align-items: center !important;
+  border: 1px dashed var(--ui-field-border) !important;
+  border-radius: var(--ui-field-radius) !important;
+  background: var(--ui-field-bg) !important;
+  color: var(--ui-text-secondary);
+  font-size: var(--ui-field-font-size);
+  line-height: 1.25 !important;
+  overflow: hidden;
+  box-shadow: var(--ui-field-shadow);
+}
+
+input[type="file"].form-control::file-selector-button,
+input[type="file"].app-field__control::file-selector-button {
+  height: var(--ui-field-height);
+  margin: 0;
+  margin-inline-end: 0.75rem;
+  padding: 0 1rem;
+  border: none;
+  border-inline-end: 1px solid var(--ui-field-border);
+  background: #f8fafc;
+  color: var(--ui-text-primary);
+  font-weight: 600;
+  font-size: var(--ui-field-font-size);
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+html[dir='rtl'] input[type="file"].form-control::file-selector-button,
+html[dir='rtl'] input[type="file"].app-field__control::file-selector-button {
+  margin-inline-end: 0;
+  margin-inline-start: 0.75rem;
+  border-inline-end: none;
+  border-inline-start: 1px solid var(--ui-field-border);
+}
+
+input[type="file"].form-control:hover:not(:disabled)::file-selector-button,
+input[type="file"].app-field__control:hover:not(:disabled)::file-selector-button {
+  background: #eef2f7;
+}
+
+textarea.form-control:not(.app-field__control) {
+  min-height: 5.5rem;
+  padding: 12px var(--ui-field-pad-x);
+  font-size: 14px;
+  line-height: 1.45;
+  border: 1px solid var(--ui-field-border) !important;
+  border-radius: var(--ui-field-radius) !important;
+  background: var(--ui-field-bg) !important;
+  color: var(--ui-text-primary);
+  box-shadow: var(--ui-field-shadow);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+input.form-control:not(.app-field__control):not(.rmdp-input):hover:not(:disabled),
+textarea.form-control:not(.app-field__control):hover:not(:disabled),
+select.form-select:not(.app-field__control):hover:not(:disabled) {
+  border-color: rgba(38, 186, 153, 0.3) !important;
+  background: var(--ui-field-bg) !important;
+}
+
+input.form-control:not(.app-field__control):not(.rmdp-input):focus,
+textarea.form-control:not(.app-field__control):focus,
+select.form-select:not(.app-field__control):focus {
+  outline: none;
+  border-color: var(--app-primary) !important;
+  background: var(--ui-field-bg) !important;
+  box-shadow: var(--ui-field-shadow-focus) !important;
+}
+
+input.form-control.is-invalid,
+textarea.form-control.is-invalid,
+select.form-select.is-invalid {
+  border-color: var(--ui-field-error) !important;
+  background: var(--ui-field-error-soft) !important;
+}
+
+select.form-select:not(.app-field__control) {
+  appearance: none;
+  padding-inline-end: 2.35rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%2364748b' d='M3.5 5.25 7 8.75l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+}
+
+html[dir='rtl'] select.form-select:not(.app-field__control) {
+  background-position: left 1rem center;
+}
+
+/* ─── AppSelect / AppCreatableSelect (react-select) ─────────────
+   Keep value + clear + chevron on one row. Never force width:100%
+   on internal emotion/css-* nodes (that pushes the caret below). */
+.app-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.app-select__control {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  overflow: hidden !important;
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  max-height: var(--ui-field-height) !important;
+  box-sizing: border-box !important;
+}
+
+.app-select__value-container {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+}
+
+.app-select__indicators {
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  align-items: center !important;
+  height: 100% !important;
+}
+
+.app-select__indicator {
+  display: flex !important;
+  align-items: center !important;
+  padding-block: 0 !important;
+}
+
+.app-select__indicator-separator {
+  display: none !important;
+}
+
+.app-select__single-value,
+.app-select__placeholder {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.45;
+}
+
+html[dir='rtl'] .app-select__single-value,
+html[dir='rtl'] .app-select__placeholder,
+body[data-ui-lang='ur'] .app-select__single-value,
+body[data-ui-lang='ur'] .app-select__placeholder {
+  line-height: 1.45;
+  overflow-x: hidden;
+}
+
+.app-select__menu,
+.app-select__menu-portal {
+  z-index: 12060 !important;
+}
+
+/* ─── AppFileInput — same height as AppInput / AppSelect ─────── */
+
+.app-file-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ui-field-height);
+  height: var(--ui-field-height);
+  box-sizing: border-box;
+  border: 1px dashed var(--ui-field-border);
+  border-radius: var(--ui-field-radius);
+  background: var(--ui-field-bg);
+  box-shadow: var(--ui-field-shadow);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-file-field:hover:not(.app-file-field--disabled) {
+  border-color: rgba(38, 186, 153, 0.35);
+}
+
+.app-file-field--disabled {
+  opacity: 0.7;
+  background: #f3f4f6;
+}
+
+.app-file-field__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-file-field__btn {
+  flex: 0 0 auto;
+  height: 100%;
+  min-height: var(--ui-field-height);
+  padding: 0 1rem;
+  border: none;
+  border-inline-end: 1px solid var(--ui-field-border);
+  background: #f8fafc;
+  color: var(--ui-text-primary);
+  font-size: var(--ui-field-font-size);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+
+.app-file-field__btn:hover:not(:disabled) {
+  background: #eef2f7;
+}
+
+.app-file-field__btn:disabled {
+  cursor: not-allowed;
+}
+
+.app-file-field__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-inline: 0.85rem;
+  font-size: var(--ui-field-font-size);
+  color: var(--ui-text-secondary);
+  line-height: 1.35;
+}
+
+/* Larger attach area (reference design) — choose button still matches field height */
+.app-file-dropzone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  min-height: calc(var(--ui-field-height) * 2.15);
+  padding: 0.85rem 1rem;
+  box-sizing: border-box;
+  border: 1px dashed var(--ui-field-border);
+  border-radius: var(--ui-field-radius);
+  background: var(--ui-field-bg);
+  box-shadow: var(--ui-field-shadow);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-file-dropzone:hover:not(.app-file-dropzone--disabled) {
+  border-color: rgba(38, 186, 153, 0.4);
+}
+
+.app-file-dropzone--disabled {
+  opacity: 0.7;
+  background: #f3f4f6;
+}
+
+.app-file-dropzone__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-file-dropzone__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: rgba(38, 186, 153, 0.1);
+  color: var(--app-primary, #0f8f5f);
+}
+
+.app-file-dropzone__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+}
+
+.app-file-dropzone__title {
+  font-size: var(--ui-field-font-size);
+  font-weight: 700;
+  color: var(--ui-text-primary);
+  line-height: 1.45;
+}
+
+.app-file-dropzone__optional {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ui-text-secondary);
+}
+
+.app-file-dropzone__hint {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--ui-text-secondary);
+  line-height: 1.45;
+}
+
+.app-file-dropzone__btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ui-field-height);
+  height: var(--ui-field-height);
+  padding: 0 1.1rem;
+  border: 1px solid var(--ui-field-border);
+  border-radius: var(--ui-field-radius);
+  background: #fff;
+  color: var(--ui-text-primary);
+  font-size: var(--ui-field-font-size);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.app-file-dropzone__btn:hover:not(:disabled) {
+  border-color: rgba(38, 186, 153, 0.45);
+  background: #f8fffc;
+}
+
+.app-file-dropzone__btn:disabled {
+  cursor: not-allowed;
+}
+
+/* Global checkboxes / radios */
+input.form-check-input:not(.app-check__native) {
+  width: 20px;
+  height: 20px;
+  margin-top: 0.15rem;
+  border: 1.5px solid var(--ui-field-border);
+  box-shadow: var(--ui-field-shadow);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-color: var(--ui-field-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+input.form-check-input[type="radio"]:not(.app-check__native) {
+  border-radius: 50%;
+}
+
+input.form-check-input:not(.app-check__native):checked {
+  background-color: var(--app-primary);
+  border-color: var(--app-primary);
+  box-shadow: 0 2px 8px rgba(38, 186, 153, 0.35);
+}
+
+input.form-check-input[type="checkbox"]:not(.app-check__native):checked::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -2px);
+}
+
+input.form-check-input[type="radio"]:not(.app-check__native):checked::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+input.form-check-input:not(.app-check__native):focus {
+  box-shadow: var(--ui-field-shadow-focus);
+}
+
+input.form-check-input[type='radio']:not(.app-check__native) {
+  border-radius: 50%;
+}
+
+/* Floating labels: BilingualLabel + control (app-wide) */
+.bilingual-label + .form-control,
+.bilingual-label + .form-select,
+.bilingual-label + .app-date-input,
+.bilingual-label + .app-field__control,
+.bilingual-label + textarea.form-control {
+  margin-top: 0.25rem;
+}
+
+:not(.app-field__shell) > .bilingual-label {
+  display: block;
+  margin: 0 0 0.25rem !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: var(--ui-text-secondary) !important;
+}
+
+:not(.app-field__shell) > .bilingual-label + .form-control,
+:not(.app-field__shell) > .bilingual-label + .form-select,
+:not(.app-field__shell) > .bilingual-label + textarea.form-control,
+:not(.app-field__shell) > .bilingual-label + .app-date-input .rmdp-input,
+:not(.app-field__shell) > .bilingual-label + .app-field__control {
+  padding-top: 0;
+}
+
+[class*='col-'] > .bilingual-label,
+.mb-2 > .bilingual-label,
+.mb-3 > .bilingual-label {
+  display: block;
+  margin: 0 0 0.25rem !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: var(--ui-text-secondary) !important;
+}
+
+[class*='col-'] > .bilingual-label + .form-control,
+[class*='col-'] > .bilingual-label + .form-select,
+[class*='col-'] > .bilingual-label + textarea.form-control,
+[class*='col-'] > .bilingual-label + .app-date-input,
+.mb-2 > .bilingual-label + .form-control,
+.mb-2 > .bilingual-label + .app-date-input {
+  margin-top: 0;
+}
+
+/* ─── Bridge: legacy Bootstrap fields in panels ─────────────── */
+
+/* Fix flex alignment for form groups with labels and buttons */
+.d-flex.gap-2, .d-flex.gap-3 {
+  align-items: center;
+}
+
+/* Ensure bottom-alignment for toolbars so buttons align with inputs that have labels */
+.page-toolbar .row,
+.app-filter-bar .row {
+  align-items: flex-end;
+}
+
+/* Clear margins if flex-end handles it */
+.page-toolbar .row > [class*="col-"] > .btn,
+.app-filter-bar .row > [class*="col-"] > .btn {
+  margin-bottom: 0;
+}
+
+.modal-app-body .form-control,
+.modal-app-body .form-select,
+.content-panel .form-control:not(.rmdp-input),
+.content-panel .form-select,
+.page-toolbar .form-control,
+.page-toolbar .form-select,
+.app-filter-bar .form-control,
+.app-filter-bar .form-select {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  box-sizing: border-box;
+  padding: 0 var(--ui-field-pad-x) !important;
+  font-size: var(--ui-field-font-size);
+  line-height: 1.25;
+  border: 1px solid var(--ui-field-border) !important;
+  border-radius: var(--ui-field-radius) !important;
+  background: var(--ui-field-bg) !important;
+  color: var(--ui-text-primary);
+  box-shadow: var(--ui-field-shadow);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.page-toolbar .btn,
+.app-filter-bar .btn,
+.modal-app-footer .btn,
+.modal-app-footer .app-btn {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  padding-block: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.modal-app-body input[type="file"].form-control,
+.content-panel input[type="file"].form-control,
+.page-toolbar input[type="file"].form-control,
+.app-filter-bar input[type="file"].form-control,
+.modal-app-body input[type="file"].app-field__control,
+.content-panel input[type="file"].app-field__control {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  max-height: var(--ui-field-height) !important;
+  padding: 0 !important;
+  padding-inline-end: var(--ui-field-pad-x) !important;
+}
+
+.modal-app-body textarea.form-control,
+.content-panel textarea.form-control {
+  min-height: 5.5rem;
+  padding: 0.8rem var(--ui-field-pad-x);
+  line-height: var(--ui-field-line-height);
+}
+
+.modal-app-body .form-control:hover:not(:disabled),
+.modal-app-body .form-select:hover:not(:disabled),
+.content-panel .form-control:hover:not(:disabled),
+.content-panel .form-select:hover:not(:disabled) {
+  border-color: rgba(38, 186, 153, 0.3) !important;
+  background: var(--ui-field-bg) !important;
+}
+
+.modal-app-body .form-control:focus,
+.modal-app-body .form-select:focus,
+.content-panel .form-control:focus,
+.content-panel .form-select:focus {
+  outline: none;
+  border-color: var(--app-primary) !important;
+  background: var(--ui-field-bg) !important;
+  box-shadow: var(--ui-field-shadow-focus) !important;
+}
+
+.modal-app-body .form-control.is-invalid,
+.content-panel .form-control.is-invalid {
+  border-color: var(--ui-field-error) !important;
+  background: var(--ui-field-error-soft) !important;
+}
+
+.modal-app-body .form-select,
+.content-panel .form-select {
+  appearance: none;
+  padding-inline-end: 2.35rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+}
+
+html[dir='rtl'] .modal-app-body .form-select,
+html[dir='rtl'] .content-panel .form-select {
+  background-position: left 1rem center;
+}
+
+/* Legacy checkboxes / radios in forms */
+.modal-app-body .form-check-input,
+.content-panel .form-check-input {
+  width: 20px;
+  height: 20px;
+  margin-top: 0.15rem;
+  border: 1.5px solid var(--ui-field-border);
+  box-shadow: var(--ui-field-shadow);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-color: var(--ui-field-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-app-body .form-check-input:checked,
+.content-panel .form-check-input:checked {
+  background-color: var(--app-primary);
+  border-color: var(--app-primary);
+  box-shadow: 0 2px 8px rgba(38, 186, 153, 0.35);
+}
+
+.modal-app-body .form-check-input[type="checkbox"]:checked::after,
+.content-panel .form-check-input[type="checkbox"]:checked::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -2px);
+}
+
+.modal-app-body .form-check-input[type='radio']:checked::after,
+.content-panel .form-check-input[type='radio']:checked::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.modal-app-body .form-check-input:focus,
+.content-panel .form-check-input:focus {
+  box-shadow: var(--ui-field-shadow-focus);
+}
+
+.modal-app-body .form-check-input[type='radio'],
+.content-panel .form-check-input[type='radio'] {
+  border-radius: 50%;
+}
+
+/* Label positioning in modals (standardized to top labels) */
+.modal-app-body .row > [class*='col-'] {
+  position: relative;
+}
+
+.modal-app-body .row > [class*='col-'] > .bilingual-label + .form-control,
+.modal-app-body .row > [class*='col-'] > .bilingual-label + .form-select,
+.modal-app-body .row > [class*='col-'] > .bilingual-label + .app-date-input,
+.modal-app-body .mb-2 > .bilingual-label + .form-control,
+.modal-app-body .mb-2 > .bilingual-label + .app-date-input {
+  margin-top: 0;
+}
+
+.modal-app-body .bilingual-label {
+  position: static;
+  display: block;
+  transform: none;
+  margin: 0 0 0.25rem !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: var(--ui-text-secondary) !important;
+}
+
+.modal-app-body .bilingual-label + .form-control,
+.modal-app-body .bilingual-label + .form-select,
+.modal-app-body .bilingual-label + .app-date-input .rmdp-input {
+  padding-top: 0;
+}
+
+

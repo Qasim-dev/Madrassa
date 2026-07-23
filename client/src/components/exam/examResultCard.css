@@ -1,0 +1,433 @@
+/* ─── Sanad-e-In'am result certificate ───────────────────────── */
+
+.sanad-card {
+  position: relative;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 1.5rem;
+  background: linear-gradient(180deg, #fffef9 0%, #ffffff 12%, #ffffff 100%);
+  border: 3px double var(--ds-primary);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(15, 118, 110, 0.15),
+    0 8px 32px rgba(15, 23, 42, 0.08);
+  page-break-inside: avoid;
+  break-inside: avoid;
+  font-family: var(--font-urdu), 'Noto Nastaliq Urdu', serif;
+  color: #1e293b;
+}
+
+.sanad-card--draft {
+  border-color: #94a3b8;
+}
+
+.sanad-card__watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 800;
+  font-family: var(--font-latin-ui), sans-serif;
+  color: rgba(148, 163, 184, 0.22);
+  transform: rotate(-14deg);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Header: logo | title | institution */
+.sanad-card__header {
+  display: grid;
+  grid-template-columns: 88px 1fr minmax(0, 34%);
+  gap: 0.75rem 1rem;
+  align-items: start;
+  padding-bottom: 0.85rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 2px solid var(--ds-primary);
+}
+
+[dir='ltr'] .sanad-card__header {
+  grid-template-columns: minmax(0, 34%) 1fr 88px;
+}
+
+[dir='ltr'] .sanad-card__logo-wrap {
+  order: 3;
+}
+
+[dir='ltr'] .sanad-card__title-block {
+  order: 2;
+}
+
+[dir='ltr'] .sanad-card__inst-block {
+  order: 1;
+  text-align: left;
+}
+
+.sanad-card__logo-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.sanad-card__logo-svg,
+.sanad-card__logo-img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.sanad-card__title-block {
+  text-align: center;
+  padding-top: 0.15rem;
+}
+
+.sanad-card__bismillah {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.sanad-card__title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--ds-primary);
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+[dir='ltr'] .sanad-card__title {
+  font-family: var(--font-latin-ui), Georgia, serif;
+  font-size: 1.65rem;
+}
+
+.sanad-card__subtitle {
+  margin: 0.4rem 0 0;
+  font-size: 1rem;
+  color: var(--ds-text-secondary);
+  font-weight: 600;
+}
+
+.sanad-card__inst-block {
+  text-align: end;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.sanad-card__inst-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f172a;
+  margin-bottom: 0.15rem;
+}
+
+.sanad-card__inst-aff {
+  color: #475569;
+  margin-bottom: 0.35rem;
+}
+
+.sanad-card__meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem 0.5rem;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+}
+
+[dir='ltr'] .sanad-card__meta-line {
+  justify-content: flex-start;
+}
+
+.sanad-card__meta-line strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Student info + photo */
+.sanad-card__student-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 0.75rem 1rem;
+  align-items: stretch;
+  margin-bottom: 0.85rem;
+}
+
+[dir='ltr'] .sanad-card__student-block {
+  grid-template-columns: 92px minmax(0, 1fr);
+}
+
+[dir='ltr'] .sanad-card__photo-wrap {
+  order: -1;
+}
+
+.sanad-card__student-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem 1rem;
+  margin-bottom: 0;
+  padding: 0.65rem 0.75rem;
+  background: linear-gradient(135deg, #f0fdf9 0%, #f8fafc 100%);
+  border: 1px solid #99f6e4;
+  border-radius: 6px;
+}
+
+.sanad-card__photo-wrap {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.sanad-card__photo {
+  width: 92px;
+  height: 110px;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 6px;
+  border: 2px solid var(--ds-primary);
+  background: #f8fafc;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.sanad-card__photo--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  border-style: dashed;
+  border-color: #94a3b8;
+}
+
+.sanad-card__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.sanad-card__field--wide {
+  grid-column: span 2;
+}
+
+.sanad-card__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+[dir='ltr'] .sanad-card__label {
+  font-family: var(--font-latin-ui), sans-serif;
+}
+
+.sanad-card__value {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0f172a;
+  border-bottom: 1px dotted #cbd5e1;
+  padding-bottom: 0.2rem;
+  min-height: 1.5rem;
+}
+
+.sanad-card__value--name {
+  font-size: 1.05rem;
+  color: var(--ds-primary);
+}
+
+.sanad-card__value--emph {
+  color: #b45309;
+  font-size: 1rem;
+}
+
+/* Marks table */
+.sanad-card__table-wrap {
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.sanad-card__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.sanad-card__table th,
+.sanad-card__table td {
+  border: 1px solid var(--ds-text-secondary);
+  padding: 0.4rem 0.45rem;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.sanad-card__table thead th {
+  background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
+  font-weight: 700;
+  color: var(--ds-primary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.sanad-card__table tbody td:nth-child(2) {
+  text-align: start;
+  font-weight: 500;
+}
+
+[dir='ltr'] .sanad-card__table tbody td:nth-child(2) {
+  text-align: left;
+}
+
+.sanad-card__th-num,
+.sanad-card__td-num {
+  width: 2.5rem;
+  font-weight: 600;
+}
+
+.sanad-card__td-marks {
+  width: 4.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sanad-card__td-fail {
+  color: #b91c1c;
+}
+
+.sanad-card__row-pad td {
+  height: 1.75rem;
+  color: transparent;
+}
+
+.sanad-card__totals {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.sanad-card__totals-label {
+  text-align: start !important;
+  font-size: 0.88rem;
+  color: var(--ds-primary);
+}
+
+[dir='ltr'] .sanad-card__totals-label {
+  text-align: left !important;
+}
+
+.sanad-card__totals-summary {
+  text-align: start !important;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+[dir='ltr'] .sanad-card__totals-summary {
+  text-align: left !important;
+  font-family: var(--font-latin-ui), sans-serif;
+}
+
+.sanad-card__division {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.sanad-card__rank-note {
+  font-weight: 600;
+  color: #475569;
+}
+
+/* Footer: signature + stamp */
+.sanad-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.sanad-card__sign {
+  flex: 1;
+  max-width: 45%;
+}
+
+.sanad-card__sign-line {
+  height: 2.5rem;
+  border-bottom: 1px solid var(--ds-text-secondary);
+  margin-bottom: 0.35rem;
+}
+
+.sanad-card__sign-label {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.sanad-card__stamp {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sanad-card__stamp-inner {
+  width: 88px;
+  height: 88px;
+  border: 3px double var(--ds-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  text-align: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--app-primary-dark);
+  line-height: 1.35;
+  opacity: 0.85;
+  transform: rotate(-8deg);
+}
+
+/* Print layout */
+@media print {
+  .sanad-card {
+    box-shadow: none;
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: 10mm 12mm;
+    border-width: 2px;
+  }
+
+  .sanad-card__title {
+    font-size: 1.75rem;
+  }
+
+  .sanad-card__photo {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+@media (max-width: 640px) {
+  .sanad-card__student-block {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  [dir='rtl'] .sanad-card__student-block {
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+
+  .sanad-card__photo {
+    width: 72px;
+    height: 88px;
+  }
+
+  .sanad-card__student-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

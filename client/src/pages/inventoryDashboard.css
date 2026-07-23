@@ -1,0 +1,277 @@
+/* انوینٹری — warehouse dashboard (flat SaaS) */
+.inv-dash__hero {
+  background: #ffffff;
+  border-radius: calc(var(--theme-radius-card, 1.1rem) + 0.2rem);
+  border: 1px solid var(--app-border, #eae9e4);
+  box-shadow: var(--theme-card-shadow, 0 1px 2px rgba(16, 24, 40, 0.04));
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+}
+.inv-dash__hero-title {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.inv-dash__hero-sub {
+  color: #64748b;
+  margin-top: 0.35rem;
+}
+.inv-dash__stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.inv-dash__stat-card {
+  position: relative;
+  border-radius: var(--theme-radius-card, 1.1rem);
+  padding: 1.15rem 1.25rem;
+  min-height: 108px;
+  border: 1px solid var(--app-border, #eae9e4);
+  box-shadow: var(--theme-card-shadow, 0 1px 2px rgba(16, 24, 40, 0.04));
+  background: #ffffff;
+  overflow: hidden;
+}
+.inv-dash__stat-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 143, 95, 0.1);
+  color: var(--app-primary, #0f8f5f);
+  margin-bottom: 0.5rem;
+}
+.inv-dash__stat-card--warn .inv-dash__stat-icon {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+}
+.inv-dash__stat-card--danger .inv-dash__stat-icon {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+.inv-dash__stat-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+.inv-dash__stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+.inv-dash__stat-hint {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 0.3rem;
+}
+.inv-dash__panel {
+  border-radius: 1.5rem;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+.inv-dash__panel-head {
+  padding: 0.95rem 1.2rem;
+  background: var(--theme-surface-muted, #f8f8f6);
+  border-bottom: 1px solid var(--app-border, #eae9e4);
+  font-weight: 700;
+  color: #0f172a;
+}
+.inv-dash__panel-body {
+  padding: 1.2rem;
+}
+.inv-dash__cta {
+  border-radius: 999px;
+  padding: 0.5rem 1.4rem;
+  font-weight: 600;
+  border: none;
+  color: #fff;
+  background: var(--app-primary, #0f8f5f);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+.inv-dash__cta:hover {
+  background: var(--app-primary-hover, #0b7a50);
+  color: #fff;
+}
+.inv-dash__charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+.inv-dash__chart-box {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: 1.25rem;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
+  padding: 0.85rem 1rem 1rem;
+  min-height: 300px;
+}
+.inv-dash__chart-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #334155;
+  padding-bottom: 0.45rem;
+  text-align: center;
+  width: 100%;
+}
+.inv-dash__chart-body {
+  flex: 1;
+  width: 100%;
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.inv-dash__chart-empty {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  max-width: 16rem;
+  margin: 0 auto;
+  line-height: 1.55;
+  white-space: normal;
+}
+.inv-dash__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: flex-end;
+  padding: 0.9rem 1.15rem;
+  background: #fafbfc;
+  border-bottom: 1px solid #f1f5f9;
+}
+.inv-dash__toolbar--filters {
+  display: block;
+  padding: 0.75rem 1rem;
+}
+.inv-dash__toolbar--filters .filter-toolbar {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.inv-dash__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.inv-dash__table th {
+  text-align: inherit;
+  padding: 0.55rem 0.75rem;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.inv-dash__table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.inv-dash__table tr:hover td {
+  background: #fafafa;
+}
+.inv-dash__badge {
+  display: inline-block;
+  padding: 0.18rem 0.5rem;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.inv-dash__badge--ok {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+.inv-dash__badge--low {
+  background: rgba(251, 191, 36, 0.22);
+  color: #b45309;
+}
+.inv-dash__badge--out {
+  background: rgba(248, 113, 113, 0.18);
+  color: #b91c1c;
+}
+.inv-dash__alerts {
+  border-radius: var(--theme-radius-card, 1.1rem);
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.5rem;
+}
+.inv-dash__alerts-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  color: #92400e;
+}
+.inv-dash__alert-row {
+  font-size: 0.82rem;
+  color: #78350f;
+  padding: 0.25rem 0;
+  border-bottom: 1px dashed rgba(180, 83, 9, 0.2);
+}
+.inv-dash__pagination {
+  padding: 0.65rem 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  border-top: 1px solid #f1f5f9;
+}
+/* Inventory modals: label + control alignment (matches finance modal pattern) */
+.inv-dash__modal-dialog.modal-app-dialog--lg {
+  max-width: min(44rem, 96vw);
+}
+
+/* Stock movement: dense grid — avoid heavy label cards overlapping controls */
+.inv-dash__modal-dialog .modal-app-body .bilingual-label {
+  margin-bottom: 0.35rem !important;
+  padding: 0.35rem 0.55rem !important;
+  border-radius: 0.45rem;
+  box-shadow: none;
+}
+
+.inv-dash__modal-dialog .modal-app-body .bilingual-label .bilingual-label__text {
+  display: block;
+  text-align: start;
+  width: 100%;
+}
+
+.inv-dash__modal-dialog .modal-app-body .form-label.small.text-secondary {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  color: #64748b;
+  text-align: start;
+  width: 100%;
+}
+
+.inv-dash__modal-dialog .modal-app-body .form-select.form-select-sm,
+.inv-dash__modal-dialog .modal-app-body .form-control.form-control-sm:not(.latin-input) {
+  text-align: start;
+}
+
+/* Keeps row height steadier when one column shows a validation message */
+.inv-dash__modal-field-msg {
+  min-height: 1.5rem;
+  margin-top: 0.15rem;
+}
+
+.inv-dash__modal-field-error {
+  margin-top: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #b91c1c;
+  text-align: start;
+  line-height: 1.35;
+}

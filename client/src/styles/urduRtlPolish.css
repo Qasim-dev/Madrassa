@@ -1,0 +1,520 @@
+/* ═══════════════════════════════════════════════════════════════
+   Global Urdu / RTL polish — design-system layer (not page hacks)
+   EN layout stays on default metrics; UR uses body[data-ui-lang='ur']
+   and html[dir='rtl'] for Nastaliq optical centering + rhythm.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Shared title → subtitle → content rhythm (EN + UR) ─────── */
+
+[class*='__title']:is(h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6),
+.dashboard-chart-card__title,
+.page-heading__title,
+.content-panel-head__title,
+.exam-step-header__title,
+.settings-section__title,
+.page-section-title__text {
+  margin-block-end: var(--ds-title-subtitle-gap, 0.5rem);
+}
+
+.dashboard-chart-card__subtitle,
+.page-heading__subtitle,
+.exam-step-header__hint,
+.settings-section__hint,
+.ds-page-subtitle {
+  margin-block-end: 0;
+  line-height: var(--ds-leading-relaxed, 1.75);
+}
+
+body[data-ui-lang='ur'] .dashboard-chart-card__subtitle,
+body[data-ui-lang='ur'] .page-heading__subtitle,
+body[data-ui-lang='ur'] .exam-step-header__hint,
+body[data-ui-lang='ur'] .settings-section__hint,
+body[data-ui-lang='ur'] .ds-page-subtitle,
+html[dir='rtl'] .dashboard-chart-card__subtitle,
+html[dir='rtl'] .page-heading__subtitle {
+  line-height: var(--ds-leading-urdu, 1.85);
+  margin-block-start: 0;
+}
+
+.dashboard-chart-card__head {
+  margin-block-end: var(--ds-subtitle-content-gap, 1.25rem);
+}
+
+.dashboard-chart-card__title {
+  margin-block-end: var(--ds-title-subtitle-gap, 0.5rem) !important;
+}
+
+.dashboard-chart-card__subtitle {
+  margin-block-end: 0 !important;
+}
+
+/* ── Buttons: one height with fields, true flex center (no height growth) ─ */
+
+.btn:not(.btn-close):not(.btn-link),
+.app-btn,
+.page-heading__actions .btn,
+.app-topbar .btn,
+.app-topbar .btn-sm,
+.page-toolbar .btn,
+.app-filter-bar .btn,
+.filter-drawer__btn,
+.modal-app-footer .btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--ds-btn-gap-icon, 0.4rem);
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  padding-inline: var(--btn-pad-x) !important;
+  padding-block: 0 !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: var(--btn-font, var(--ds-text-button, 0.8125rem));
+}
+
+.btn-lg,
+.app-btn--lg {
+  min-height: var(--btn-lg-height) !important;
+  height: var(--btn-lg-height) !important;
+  max-height: none;
+  overflow: visible;
+}
+
+/* Urdu: same compact height as fields; optical nudge inside the box only */
+body[data-ui-lang='ur'] .btn:not(.btn-close):not(.btn-link),
+body[data-ui-lang='ur'] .app-btn,
+body[data-ui-lang='ur'] .page-toolbar .btn,
+body[data-ui-lang='ur'] .app-filter-bar .btn,
+body[data-ui-lang='ur'] .modal-app-footer .btn {
+  font-size: var(--ds-text-button-ur, 0.78rem) !important;
+  line-height: 1 !important;
+  /* Push Nastaliq down inside fixed height — do not move the box */
+  padding-block-start: 0.15rem !important;
+  padding-block-end: 0 !important;
+  transform: none !important;
+}
+
+body[data-ui-lang='ur'] .btn > svg,
+body[data-ui-lang='ur'] .app-btn > svg,
+body[data-ui-lang='ur'] .btn .bi,
+body[data-ui-lang='ur'] .app-btn .bi {
+  flex-shrink: 0;
+  transform: none;
+}
+
+.btn.btn-icon,
+.app-btn--icon,
+.btn-close {
+  padding-block: 0 !important;
+  transform: none !important;
+}
+
+/* ── Topbar: every control same height, one baseline ────────── */
+
+.app-topbar__inner,
+.app-topbar__actions,
+.app-topbar__session {
+  align-items: center !important;
+}
+
+.app-topbar .app-header-search__inner,
+.app-topbar .app-header-select .app-select__control,
+.app-topbar .app-header-select div[class*='-control'],
+.app-topbar .app-header-select .app-select__value-container,
+.app-topbar .app-header-select div[class*='-valueContainer'],
+.app-topbar .tt-week-toggle--header,
+.app-topbar .tt-week-toggle--compact,
+.app-topbar .btn,
+.app-topbar .btn-sm {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  max-height: var(--ui-field-height) !important;
+  box-sizing: border-box !important;
+}
+
+.app-topbar .tt-week-toggle--header .tt-week-toggle__btn {
+  height: calc(var(--ui-field-height) - 4px) !important;
+  min-height: calc(var(--ui-field-height) - 4px) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  padding-block: 0 !important;
+  transform: none !important;
+}
+
+body[data-ui-lang='ur'] .app-topbar .tt-week-toggle--header .tt-week-toggle__btn {
+  font-size: var(--ds-text-button-ur, 0.78rem);
+  /* Latin UR/EN labels — geometric center, no Nastaliq nudge */
+  transform: none !important;
+}
+
+body[data-ui-lang='ur'] .app-header-search__input,
+html[dir='rtl'] .app-header-search__input {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  padding-block-start: 0.12rem !important;
+  padding-block-end: 0 !important;
+  line-height: 1.25 !important;
+  transform: none !important;
+}
+
+body[data-ui-lang='ur'] .app-header-search__input::placeholder,
+html[dir='rtl'] .app-header-search__input::placeholder {
+  line-height: 1.25;
+  opacity: 1;
+  position: relative;
+  top: 0;
+}
+
+.app-topbar .app-select__single-value,
+.app-topbar .app-select__placeholder,
+.app-topbar div[class*='-singleValue'],
+.app-topbar div[class*='-placeholder'] {
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  line-height: 1.25 !important;
+  padding-block: 0 !important;
+}
+
+body[data-ui-lang='ur'] .app-topbar .app-select__single-value,
+body[data-ui-lang='ur'] .app-topbar .app-select__placeholder {
+  padding-block-start: 0.1rem;
+  transform: none;
+}
+
+/* ── Fields / selects / dates: center text, keep height fixed ─ */
+
+body[data-ui-lang='ur'] .app-field__control:not(.app-field__control--textarea):not([type='file']),
+body[data-ui-lang='ur'] .form-control:not(textarea):not([type='file']):not(.rmdp-input),
+body[data-ui-lang='ur'] .form-select,
+body[data-ui-lang='ur'] .rmdp-input {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  max-height: var(--ui-field-height) !important;
+  display: flex !important;
+  align-items: center !important;
+  padding-block-start: 0.12rem !important;
+  padding-block-end: 0 !important;
+  line-height: 1.25 !important;
+  box-sizing: border-box !important;
+}
+
+body[data-ui-lang='ur'] .app-field__control:not(.app-field__control--textarea):not(.app-field__control--latin):not([type='file']),
+body[data-ui-lang='ur'] .form-control:not(textarea):not([type='file']):not(.latin-input):not(.rmdp-input),
+body[data-ui-lang='ur'] .form-select:not(.latin-input) {
+  transform: translateY(0);
+}
+
+body[data-ui-lang='ur'] .app-select__control,
+body[data-ui-lang='ur'] div[class*='-control'] {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  max-height: var(--ui-field-height) !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+body[data-ui-lang='ur'] .app-select__value-container,
+body[data-ui-lang='ur'] div[class*='-valueContainer'] {
+  min-height: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  padding-block: 0 !important;
+}
+
+body[data-ui-lang='ur'] .app-select__single-value,
+body[data-ui-lang='ur'] .app-select__placeholder,
+body[data-ui-lang='ur'] div[class*='-singleValue'],
+body[data-ui-lang='ur'] div[class*='-placeholder'] {
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  line-height: 1.25 !important;
+  padding-block-start: 0.1rem !important;
+  padding-block-end: 0 !important;
+  transform: none !important;
+}
+
+body[data-ui-lang='ur'] .app-select__indicators,
+body[data-ui-lang='ur'] div[class*='-indicatorsContainer'] {
+  height: 100% !important;
+  align-items: center !important;
+}
+
+/* ── Shared toolbar / filter rows: one baseline (no up-down) ─── */
+
+.page-toolbar__filters.row,
+.page-toolbar.page-toolbar--strip,
+.tt-toolbar__row,
+.exam-toolbar,
+.filter-toolbar__row,
+.list-page-toolbar-row,
+.app-filter-bar {
+  align-items: flex-end !important;
+}
+
+/* Search + filter chip rows (no labels): center on one line */
+.filter-toolbar__row {
+  align-items: center !important;
+}
+
+.page-toolbar__actions,
+.page-toolbar__filters .col,
+.tt-toolbar__field,
+.exam-toolbar__field {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.page-toolbar__actions .btn,
+.page-toolbar .btn,
+.exam-toolbar .btn,
+.tt-toolbar .btn,
+.filter-toolbar__row .btn {
+  align-self: stretch;
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+}
+
+.page-toolbar .app-select__control,
+.page-toolbar .form-control,
+.page-toolbar .form-select,
+.page-toolbar .app-field__control:not(textarea),
+.exam-toolbar .app-select__control,
+.exam-toolbar .form-control,
+.tt-toolbar .app-select__control,
+.filter-toolbar__row .form-control,
+.filter-toolbar__row .app-field__control {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  max-height: var(--ui-field-height) !important;
+}
+
+/* ── Tabs: compact + center (no height growth) ──────────────── */
+
+.app-tabs__tab,
+.page-content .nav.nav-tabs .nav-link,
+.nav-tabs .nav-link,
+.nav-tabs-fees .nav-link,
+.nav-tabs-attendance .nav-link {
+  min-height: var(--ds-tab-height, 2.25rem);
+  height: var(--ds-tab-height, 2.25rem);
+  padding-block: 0 !important;
+  padding-inline: 0.85rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--ds-btn-gap-icon, 0.4rem);
+  line-height: 1 !important;
+  font-size: var(--ds-text-button, 0.8125rem);
+  box-sizing: border-box;
+}
+
+body[data-ui-lang='ur'] .app-tabs__tab,
+body[data-ui-lang='ur'] .nav-tabs .nav-link {
+  font-size: var(--ds-text-button-ur, 0.78rem);
+  line-height: 1 !important;
+  padding-block-start: 0.12rem !important;
+  padding-block-end: 0 !important;
+  transform: none !important;
+}
+
+/* ── Chips / badges / chart pills ───────────────────────────── */
+
+.dashboard-chart-summary__pill,
+.app-badge,
+.badge:not(.btn),
+.exam-ctx__pill,
+.finance-dash__badge,
+.exam-audit__badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem;
+  min-height: var(--ds-badge-height, 1.75rem);
+  height: auto;
+  padding-block: 0.2rem;
+  padding-inline: var(--ds-badge-pad-x, 0.65rem);
+  border-radius: var(--ds-badge-radius, 999px);
+  font-size: var(--ds-badge-font, 0.75rem);
+  font-weight: 600;
+  line-height: 1 !important;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+body[data-ui-lang='ur'] .dashboard-chart-summary__pill,
+body[data-ui-lang='ur'] .app-badge,
+body[data-ui-lang='ur'] .badge:not(.btn),
+body[data-ui-lang='ur'] .exam-ctx__pill,
+body[data-ui-lang='ur'] .finance-dash__badge,
+body[data-ui-lang='ur'] .exam-audit__badge,
+html[dir='rtl'] .dashboard-chart-summary__pill {
+  min-height: var(--ds-badge-height-ur, 2rem);
+  padding-block-start: 0.32rem;
+  padding-block-end: 0.18rem;
+  font-size: var(--ds-badge-font-ur, 0.8125rem);
+  line-height: 1.2 !important;
+  gap: 0.45rem;
+}
+
+.dashboard-chart-summary__pill-label,
+.dashboard-chart-summary__pill-value {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+body[data-ui-lang='ur'] .dashboard-chart-summary__pill-label {
+  padding-block-start: 0.06em;
+}
+
+body[data-ui-lang='ur'] .dashboard-chart-summary__pill-value,
+html[dir='rtl'] .dashboard-chart-summary__pill-value {
+  /* Latin numerals: keep geometric center next to Nastaliq label */
+  transform: translateY(0);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ── Tables: vertical center + Urdu cell pad ────────────────── */
+
+.data-table td,
+.data-table th,
+.content-panel .table td,
+.content-panel .table th,
+.student-registration-print__grid th,
+.student-registration-print__grid td,
+.student-registration-print__data-table th,
+.student-registration-print__data-table td {
+  vertical-align: middle !important;
+  padding-block: var(--ds-table-cell-pad-y, 0.55rem);
+  padding-inline: var(--ds-table-cell-pad-x, 0.65rem);
+}
+
+body[data-ui-lang='ur'] .data-table td,
+body[data-ui-lang='ur'] .data-table th,
+html[dir='rtl'] .student-registration-print__grid td,
+html[dir='rtl'] .student-registration-print__grid th,
+html[dir='rtl'] .student-registration-print__data-table td,
+html[dir='rtl'] .student-registration-print__data-table th {
+  padding-block: var(--ds-table-cell-pad-y-ur, 0.7rem);
+  line-height: var(--ds-leading-urdu, 1.85);
+}
+
+.student-registration-print__section-title {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.25rem;
+  line-height: var(--ds-leading-urdu, 1.85);
+  padding-block: 0.45rem;
+  padding-inline: 0.65rem;
+}
+
+html[dir='rtl'] .student-registration-print__section-title {
+  padding-block-start: 0.55rem;
+  padding-block-end: 0.4rem;
+}
+
+.student-registration-print__data-table thead th {
+  display: table-cell;
+  text-align: start;
+  vertical-align: middle !important;
+  line-height: var(--ds-leading-urdu, 1.85);
+  padding-block: 0.5rem;
+}
+
+/* ── Sidebar nav: Urdu line rhythm ──────────────────────────── */
+
+body[data-ui-lang='ur'] .sidebar-menu-link__line,
+html[dir='rtl'] .sidebar-menu-link__line {
+  line-height: var(--ds-leading-urdu, 1.85);
+  padding-block-start: 0.05em;
+}
+
+body[data-ui-lang='ur'] .sidebar-menu-link,
+html[dir='rtl'] .sidebar-menu-link {
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+/* ── Exam / info banners: prevent Nastaliq clipping ─────────── */
+
+body[data-ui-lang='ur'] .exam-step-box__lead,
+html[dir='rtl'] .exam-step-box__lead,
+body[data-ui-lang='ur'] .alert,
+html[dir='rtl'] .alert {
+  line-height: var(--ds-leading-urdu, 1.85);
+  padding-block: 0.85rem 0.95rem;
+}
+
+/* ── Cards: consistent inner pad ────────────────────────────── */
+
+.dashboard-chart-card,
+.content-panel,
+.app-kpi-card {
+  --card-pad: var(--ds-card-pad, 1.25rem);
+}
+
+.dashboard-chart-card {
+  padding: var(--ds-card-pad, 1.25rem);
+}
+
+/* ── Dialogs / modals ───────────────────────────────────────── */
+
+body[data-ui-lang='ur'] .modal-app-title,
+html[dir='rtl'] .modal-app-title {
+  line-height: var(--ds-leading-urdu, 1.85);
+  margin-block-end: var(--ds-title-subtitle-gap-ur, 0.65rem);
+}
+
+body[data-ui-lang='ur'] .modal-app-footer .btn {
+  min-height: var(--ui-field-height) !important;
+  height: var(--ui-field-height) !important;
+  font-size: var(--ds-text-button-ur, 0.78rem) !important;
+  transform: none !important;
+}
+
+/* ── Form rhythm tokens (global) ────────────────────────────── */
+
+.app-field,
+.bilingual-label {
+  margin-block-end: var(--ds-form-field-gap, 0.85rem);
+}
+
+.app-form-row {
+  row-gap: var(--ds-form-row-gap, 0.75rem);
+}
+
+/* ── Icons with text: consistent size in buttons ────────────── */
+
+.btn svg,
+.app-btn svg,
+.btn .bi,
+.app-btn .bi {
+  width: var(--ds-icon-16, 1rem);
+  height: var(--ds-icon-16, 1rem);
+  flex-shrink: 0;
+}
+
+/* ── Filter / page toolbars stay flex-end aligned ───────────── */
+
+.page-toolbar--strip .page-toolbar__filters,
+.filter-toolbar__row,
+.tt-toolbar__row,
+.exam-toolbar {
+  align-items: flex-end;
+}
+
+.filter-toolbar__row {
+  align-items: center; /* search + filter chip: no labels */
+}
