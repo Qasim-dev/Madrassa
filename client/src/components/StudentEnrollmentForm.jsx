@@ -26,7 +26,7 @@ import {
 } from '../shared/pakistanGeoUrdu.js'
 import AppDateInput from './AppDateInput'
 import { FlSectionTitle } from './BilingualLabel'
-import { AppInput, AppSelect, AppTextarea, AppCheckbox, FormField, FormRow, AppFileInput } from './ui'
+import { AppInput, AppSelect, AppTextarea, FormField, FormRow, AppFileInput } from './ui'
 import { absoluteAssetUrl } from '../shared/assetUrl'
 
 const emptyLoc = () => ({ ur: '', en: '' })
@@ -150,7 +150,7 @@ export default function StudentEnrollmentForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDarjah?._id, form.subjectId, teacherOptions.length])
 
-  // If Darjah has an assignment for selected subject, auto-fill teacher/book.
+  // If Darjah has an assignment for selected subject, auto-fill teacher.
   useEffect(() => {
     if (!selectedDarjah) return
     if (!form.subjectId) return
@@ -159,16 +159,33 @@ export default function StudentEnrollmentForm({
       rows.find((a) => String(a?.subjectId?._id || a?.subjectId || '') === String(form.subjectId)) || null
     if (!hit) return
     const teacherId = hit.teacherId?._id || hit.teacherId || ''
-    const bookId = hit.bookId?._id || hit.bookId || ''
-    if (!teacherId && !bookId) return
+    if (!teacherId) return
     setForm((prev) => ({
       ...prev,
       teacherId: prev.teacherId || teacherId || '',
-      bookIds: prev.bookIds?.length ? prev.bookIds : bookId ? [bookId] : [],
-      bookId: prev.bookId || bookId || '',
     }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDarjah?._id, form.subjectId])
+
+  // Auto-assign every book linked to the selected subject + darjah.
+  const classBookIdsKey = books.map((b) => String(b._id)).join(',')
+  useEffect(() => {
+    if (!form.subjectId || !form.darjahId) return
+    const ids = classBookIdsKey ? classBookIdsKey.split(',') : []
+    setForm((prev) => {
+      const prevIds = (prev.bookIds || []).map(String)
+      const same =
+        prevIds.length === ids.length &&
+        prevIds.every((id, i) => id === ids[i]) &&
+        String(prev.bookId || '') === String(ids[0] || '')
+      if (same) return prev
+      return {
+        ...prev,
+        bookIds: ids,
+        bookId: ids[0] || '',
+      }
+    })
+  }, [form.subjectId, form.darjahId, classBookIdsKey])
 
   const { data: nextStudent } = useGetNextStudentIdQuery(
     form.sessionId ? { sessionId: form.sessionId } : undefined,
@@ -1127,7 +1144,9 @@ export default function StudentEnrollmentForm({
           </FormField>
           <FormField k="bookTitle" htmlFor="f-books" col={12}>
             <p className="small text-secondary mb-2" lang={lang}>
-              {lng === 'ur' ? 'ایک یا زیادہ کتابیں منتخب کریں' : 'Select one or more books'}
+              {lng === 'ur'
+                ? 'اس درجہ کی تمام کتابیں خود بخود تفویض ہو جائیں گی'
+                : 'All books for this class are assigned automatically'}
             </p>
             {!form.subjectId || !form.darjahId ? (
               <p className="small text-muted mb-0" lang={lang}>
@@ -1136,31 +1155,11 @@ export default function StudentEnrollmentForm({
             ) : books.length === 0 ? (
               <p className="small text-muted mb-0">{lng === 'ur' ? 'کوئی کتاب نہیں' : 'No books'}</p>
             ) : (
-              <div className="d-flex flex-column gap-2 border rounded p-2 bg-body-tertiary">
-                {books.map((b) => {
-                  const checked = (form.bookIds || []).some((id) => String(id) === String(b._id))
-                  return (
-                    <AppCheckbox
-                      key={b._id}
-                      id={`book-${b._id}`}
-                      checked={checked}
-                      onChange={(e) => {
-                        const next = new Set((form.bookIds || []).map(String))
-                        if (e.target.checked) next.add(String(b._id))
-                        else next.delete(String(b._id))
-                        const bookIds = [...next]
-                        setForm({
-                          ...form,
-                          bookIds,
-                          bookId: bookIds[0] || '',
-                        })
-                      }}
-                      label={loc(b.title, lng)}
-                      size="sm"
-                    />
-                  )
-                })}
-              </div>
+              <ul className="mb-0 ps-3 small" id="f-books">
+                {books.map((b) => (
+                  <li key={b._id}>{loc(b.title, lng)}</li>
+                ))}
+              </ul>
             )}
           </FormField>
           <FormField k="classTypeField" htmlFor="f-ctype" col={4}>

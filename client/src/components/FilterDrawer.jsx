@@ -121,6 +121,14 @@ export function FilterToolbar({
           className="btn btn-sm btn-outline-secondary filter-toolbar__btn no-print"
           onClick={() => onOpenFilters?.()}
         >
+          <svg className="filter-toolbar__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M4 6h16M7 12h10M10 18h4"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
           {t('common.filter')}
           {activeCount > 0 ? (
             <span className="filter-toolbar__badge" aria-hidden="true">

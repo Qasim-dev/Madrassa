@@ -1,0 +1,430 @@
+/* CR80 PVC student ID card — 85.60 × 53.98 mm */
+
+.sid-card {
+  --sid-w: 85.6mm;
+  --sid-h: 53.98mm;
+  --sid-navy: #1a2b3c;
+  --sid-gold: #c9a227;
+  --sid-green: #32a852;
+  --sid-red: #c62828;
+  position: relative;
+  width: var(--sid-w);
+  height: var(--sid-h);
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 2.5mm;
+  background: #fff;
+  border: 0.25mm solid #d4d4d8;
+  font-family: var(--ds-font-latin, Inter, system-ui, sans-serif);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  flex-shrink: 0;
+}
+
+.sid-card--classic {
+  --sid-navy: #0f8f5f;
+  --sid-gold: #c9a227;
+  --sid-green: #0b6e49;
+}
+
+.sid-card__punch {
+  position: absolute;
+  top: 1.6mm;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3.2mm;
+  height: 3.2mm;
+  border-radius: 50%;
+  background: #e5e7eb;
+  border: 0.2mm solid #cbd5e1;
+  z-index: 5;
+}
+
+/* ── Front ─────────────────────────────────────────────────── */
+
+.sid-card--front {
+  display: flex;
+  flex-direction: column;
+}
+
+.sid-card__front-head {
+  background: linear-gradient(135deg, var(--sid-navy) 0%, #243447 100%);
+  color: #fff;
+  padding: 4.5mm 4mm 2.2mm;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sid-card--classic .sid-card__front-head {
+  background: linear-gradient(135deg, var(--sid-navy) 0%, var(--sid-green) 100%);
+}
+
+.sid-card__inst-name {
+  font-size: 3.1mm;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sid-gold);
+  line-height: 1.15;
+}
+
+.sid-card__inst-sub {
+  font-size: 2.1mm;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  margin-top: 0.4mm;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sid-card__session {
+  margin-top: 0.8mm;
+  font-size: 1.9mm;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.sid-card__title-bar {
+  background: linear-gradient(90deg, #cfd4da, #f1f5f9, #cfd4da);
+  color: #111827;
+  text-align: center;
+  font-size: 2.2mm;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 1mm 2mm;
+  text-transform: uppercase;
+}
+
+.sid-card__body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2mm 3mm 2.5mm;
+  min-height: 0;
+}
+
+.sid-card__stripes {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      -32deg,
+      transparent,
+      transparent 4mm,
+      rgba(50, 168, 82, 0.07) 4mm,
+      rgba(50, 168, 82, 0.07) 6mm
+    );
+  pointer-events: none;
+}
+
+.sid-card__photo-wrap {
+  position: relative;
+  z-index: 1;
+  width: 16mm;
+  height: 16mm;
+  border-radius: 50%;
+  padding: 0.5mm;
+  background: linear-gradient(135deg, #f59e0b, var(--sid-green));
+  box-shadow: 0 0.5mm 1.5mm rgba(15, 23, 42, 0.18);
+}
+
+.sid-card__photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2mm;
+  color: #94a3b8;
+}
+
+.sid-card__name-plate {
+  position: relative;
+  z-index: 1;
+  margin-top: 1.6mm;
+  min-width: 42mm;
+  max-width: 72mm;
+  padding: 1mm 3mm;
+  text-align: center;
+  font-size: 2.6mm;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #0f172a;
+  background: linear-gradient(90deg, #fbbf24, #86efac);
+  border-radius: 0.6mm;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sid-card__meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6mm 2mm;
+  margin-top: 1.2mm;
+  font-size: 1.85mm;
+  color: #334155;
+  font-weight: 600;
+  max-width: 70mm;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.sid-card__qr {
+  position: absolute;
+  right: 2.5mm;
+  bottom: 2.2mm;
+  width: 9.5mm;
+  height: 9.5mm;
+  border-radius: 0.6mm;
+  background: #fff;
+  border: 0.2mm solid #e2e8f0;
+  z-index: 2;
+  object-fit: contain;
+}
+
+.sid-card__qr--empty {
+  background: #f1f5f9;
+}
+
+.sid-card__front-wash {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8mm;
+  background: linear-gradient(180deg, transparent, rgba(88, 28, 135, 0.06));
+  pointer-events: none;
+}
+
+/* ── Back ──────────────────────────────────────────────────── */
+
+.sid-card--back {
+  display: flex;
+  flex-direction: column;
+  padding: 3mm 3.2mm 2.2mm;
+}
+
+.sid-card__back-head {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  padding-bottom: 1.5mm;
+  border-bottom: 0.25mm solid #e5e7eb;
+}
+
+.sid-card__back-logo {
+  width: 8mm;
+  height: 8mm;
+  object-fit: contain;
+  border-radius: 1mm;
+  flex-shrink: 0;
+  background: #f8fafc;
+}
+
+.sid-card__back-logo--empty {
+  border: 0.2mm dashed #cbd5e1;
+}
+
+.sid-card__back-titles {
+  min-width: 0;
+  flex: 1;
+}
+
+.sid-card__back-ur {
+  font-family: var(--ds-font-urdu, 'Noto Nastaliq Urdu', serif);
+  font-size: 2.4mm;
+  line-height: 1.6;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.sid-card__back-en {
+  font-size: 2mm;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #d97706;
+  line-height: 1.2;
+}
+
+.sid-card__rows {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  min-height: 0;
+  padding: 0.6mm 0;
+}
+
+.sid-card__row {
+  display: grid;
+  grid-template-columns: 3.2mm 12mm 1fr;
+  gap: 1mm;
+  align-items: center;
+  padding: 0.55mm 0;
+  border-bottom: 0.15mm solid #eef2f7;
+  min-height: 3.4mm;
+}
+
+.sid-card__row--addr {
+  align-items: start;
+}
+
+.sid-card__row-icon {
+  width: 3.2mm;
+  height: 3.2mm;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 1.6mm;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.sid-card__row-label {
+  font-size: 1.85mm;
+  font-weight: 800;
+  color: var(--sid-red);
+  line-height: 1.2;
+}
+
+.sid-card__row-value {
+  font-size: 1.95mm;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sid-card__row--addr .sid-card__row-value {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.sid-card__back-foot {
+  margin-top: auto;
+  padding-top: 1mm;
+  border-top: 0.2mm solid #e5e7eb;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1mm;
+  font-size: 1.7mm;
+}
+
+.sid-card__validity {
+  color: var(--sid-red);
+  font-weight: 600;
+}
+
+.sid-card__authority {
+  text-align: end;
+  color: #475569;
+}
+
+.sid-card__sign-line {
+  display: block;
+  margin-top: 1.5mm;
+  border-bottom: 0.25mm solid #3b82f6;
+  width: 18mm;
+  margin-inline-start: auto;
+}
+
+.sid-card__inst-addr {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #0e7490;
+  font-size: 1.55mm;
+  line-height: 1.3;
+  margin-top: 0.4mm;
+}
+
+/* ── Pair / crop / sheets ──────────────────────────────────── */
+
+.sid-card-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4mm;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.sid-card-pair--crop .sid-card {
+  outline: 0.15mm dashed #94a3b8;
+  outline-offset: 1mm;
+}
+
+.sid-sheet {
+  display: grid;
+  gap: 4mm;
+  justify-content: center;
+  padding: 8mm;
+  background: #f8fafc;
+  border: 1px solid var(--ds-border, #eae9e4);
+  border-radius: 12px;
+}
+
+.sid-sheet--single {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+.sid-sheet--a4-8 {
+  grid-template-columns: repeat(2, var(--sid-w));
+}
+
+.sid-sheet--a4-10 {
+  grid-template-columns: repeat(2, var(--sid-w));
+}
+
+.sid-sheet--a4-12 {
+  grid-template-columns: repeat(2, var(--sid-w));
+}
+
+.sid-sheet-item {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+@media print {
+  .sid-sheet {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    gap: 2mm;
+  }
+
+  .sid-card-pair {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .sid-card-pair:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .sid-sheet--a4-8,
+  .sid-sheet--a4-10,
+  .sid-sheet--a4-12 {
+    page-break-after: always;
+  }
+}

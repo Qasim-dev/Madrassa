@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import StudentsPage from './pages/StudentsPage'
 import StudentFormPage from './pages/StudentFormPage'
 import StudentPrintPage from './pages/StudentPrintPage'
+import StudentsBulkPrintPage from './pages/StudentsBulkPrintPage'
 import TeachersPage from './pages/TeachersPage'
 import TeacherFormPage from './pages/TeacherFormPage'
 import GradesPage from './pages/GradesPage'
@@ -17,6 +18,11 @@ import InventoryPage from './pages/InventoryPage'
 import LibraryPage from './pages/LibraryPage'
 import SpeechesPage from './pages/SpeechesPage'
 import ProfilePage from './pages/ProfilePage'
+import IdCardsPage from './pages/IdCardsPage'
+import IdCardsPrintPage from './pages/IdCardsPrintPage'
+import IdCardsTemplatesPage from './pages/IdCardsTemplatesPage'
+import IdCardsHistoryPage from './pages/IdCardsHistoryPage'
+import IdCardVerifyPage from './pages/IdCardVerifyPage'
 import TartibatSessionsPage from './pages/TartibatSessionsPage'
 import TartibatSubjectsPage from './pages/TartibatSubjectsPage'
 import TartibatDarajatPage from './pages/TartibatDarajatPage'
@@ -33,6 +39,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/id-cards/verify/:token" element={<IdCardVerifyPage />} />
       <Route
         path="/"
         element={
@@ -43,9 +50,14 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="students/new" element={<StudentFormPage />} />
+        <Route path="students/print-cards" element={<StudentsBulkPrintPage />} />
         <Route path="students/:id/print" element={<StudentPrintPage />} />
         <Route path="students/:id/edit" element={<StudentFormPage />} />
         <Route path="students" element={<StudentsPage />} />
+        <Route path="id-cards" element={<IdCardsPage />} />
+        <Route path="id-cards/print" element={<IdCardsPrintPage />} />
+        <Route path="id-cards/templates" element={<IdCardsTemplatesPage />} />
+        <Route path="id-cards/history" element={<IdCardsHistoryPage />} />
         <Route path="teachers" element={<TeachersPage />} />
         <Route path="teachers/new" element={<TeacherFormPage />} />
         <Route path="teachers/:id/edit" element={<TeacherFormPage />} />

@@ -198,7 +198,7 @@ export default function TartibatSubjectsPage() {
                   ))}
                 </AppSelect>
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="ur">
                 <BilingualLabel k="subjectNameUr" htmlFor="subj-u" data-lang-field="ur" />
                 <AppInput
                   id="subj-u"
@@ -209,7 +209,7 @@ export default function TartibatSubjectsPage() {
                   dir="rtl"
                 />
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="en">
                 <BilingualLabel k="subjectNameEn" htmlFor="subj-e" data-lang-field="en" />
                 <AppInput
                   id="subj-e"
@@ -220,7 +220,7 @@ export default function TartibatSubjectsPage() {
                     onChange={(e) => setForm({ ...form, name: { ...form.name, en: e.target.value } })}
                 />
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="ur">
                 <BilingualLabel k="subjectSystemTypeUr" htmlFor="subj-sys-u" data-lang-field="ur" />
                 <AppInput
                   id="subj-sys-u"
@@ -231,7 +231,7 @@ export default function TartibatSubjectsPage() {
                   dir="rtl"
                 />
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="en">
                 <BilingualLabel k="subjectSystemTypeEn" htmlFor="subj-sys-e" data-lang-field="en" />
                 <AppInput
                   id="subj-sys-e"

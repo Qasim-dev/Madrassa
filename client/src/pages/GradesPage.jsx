@@ -165,7 +165,7 @@ export default function GradesPage() {
                     onChange={(e) => setForm({ ...form, year: Number(e.target.value) })}
                   />
                 </div>
-                <div className="mb-2">
+                <div className="mb-2" data-lang-field="ur">
                   <BilingualLabel k="gradeNameUr" htmlFor="g-nu" data-lang-field="ur" />
                   <AppInput
                     id="g-nu"
@@ -175,7 +175,7 @@ export default function GradesPage() {
                     onChange={(e) => setForm({ ...form, name: { ...form.name, ur: e.target.value } })}
                   />
                 </div>
-                <div className="mb-2">
+                <div className="mb-2" data-lang-field="en">
                   <BilingualLabel k="gradeNameEn" htmlFor="g-ne" data-lang-field="en" />
                   <AppInput
                     id="g-ne"

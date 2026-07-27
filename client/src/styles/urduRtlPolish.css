@@ -68,7 +68,7 @@ html[dir='rtl'] .page-heading__subtitle {
   padding-inline: var(--btn-pad-x) !important;
   padding-block: 0 !important;
   box-sizing: border-box !important;
-  line-height: 1 !important;
+  line-height: 1.25 !important;
   white-space: nowrap;
   overflow: hidden;
   font-size: var(--btn-font, var(--ds-text-button, 0.8125rem));
@@ -82,17 +82,17 @@ html[dir='rtl'] .page-heading__subtitle {
   overflow: visible;
 }
 
-/* Urdu: same compact height as fields; optical nudge inside the box only */
+/* Urdu: room for Nastaliq ascenders — do not clip with line-height:1 */
 body[data-ui-lang='ur'] .btn:not(.btn-close):not(.btn-link),
 body[data-ui-lang='ur'] .app-btn,
 body[data-ui-lang='ur'] .page-toolbar .btn,
 body[data-ui-lang='ur'] .app-filter-bar .btn,
-body[data-ui-lang='ur'] .modal-app-footer .btn {
+body[data-ui-lang='ur'] .modal-app-footer .btn,
+body[data-ui-lang='ur'] .app-topbar .btn {
   font-size: var(--ds-text-button-ur, 0.78rem) !important;
-  line-height: 1 !important;
-  /* Push Nastaliq down inside fixed height — do not move the box */
-  padding-block-start: 0.15rem !important;
-  padding-block-end: 0 !important;
+  line-height: 1.45 !important;
+  padding-block: 0 !important;
+  overflow: visible;
   transform: none !important;
 }
 
@@ -153,11 +153,9 @@ body[data-ui-lang='ur'] .app-topbar .tt-week-toggle--header .tt-week-toggle__btn
 
 body[data-ui-lang='ur'] .app-header-search__input,
 html[dir='rtl'] .app-header-search__input {
-  display: flex !important;
-  align-items: center !important;
+  display: block !important;
   height: 100% !important;
-  padding-block-start: 0.12rem !important;
-  padding-block-end: 0 !important;
+  padding-block: 0 !important;
   line-height: 1.25 !important;
   transform: none !important;
 }
@@ -174,8 +172,7 @@ html[dir='rtl'] .app-header-search__input::placeholder {
 .app-topbar .app-select__placeholder,
 .app-topbar div[class*='-singleValue'],
 .app-topbar div[class*='-placeholder'] {
-  display: flex !important;
-  align-items: center !important;
+  grid-area: 1 / 1 / 2 / 3 !important;
   margin: 0 !important;
   line-height: 1.25 !important;
   padding-block: 0 !important;
@@ -183,8 +180,7 @@ html[dir='rtl'] .app-header-search__input::placeholder {
 
 body[data-ui-lang='ur'] .app-topbar .app-select__single-value,
 body[data-ui-lang='ur'] .app-topbar .app-select__placeholder {
-  padding-block-start: 0.1rem;
-  transform: none;
+  padding-block: 0 !important;
 }
 
 /* ── Fields / selects / dates: center text, keep height fixed ─ */
@@ -196,10 +192,9 @@ body[data-ui-lang='ur'] .rmdp-input {
   min-height: var(--ui-field-height) !important;
   height: var(--ui-field-height) !important;
   max-height: var(--ui-field-height) !important;
-  display: flex !important;
-  align-items: center !important;
-  padding-block-start: 0.12rem !important;
-  padding-block-end: 0 !important;
+  /* Native controls: block + equal pad — flex mis-centers caret/text */
+  display: block !important;
+  padding-block: 0 !important;
   line-height: 1.25 !important;
   box-sizing: border-box !important;
 }
@@ -207,11 +202,11 @@ body[data-ui-lang='ur'] .rmdp-input {
 body[data-ui-lang='ur'] .app-field__control:not(.app-field__control--textarea):not(.app-field__control--latin):not([type='file']),
 body[data-ui-lang='ur'] .form-control:not(textarea):not([type='file']):not(.latin-input):not(.rmdp-input),
 body[data-ui-lang='ur'] .form-select:not(.latin-input) {
-  transform: translateY(0);
+  transform: none;
 }
 
 body[data-ui-lang='ur'] .app-select__control,
-body[data-ui-lang='ur'] div[class*='-control'] {
+body[data-ui-lang='ur'] .app-select div[class*='-control'] {
   min-height: var(--ui-field-height) !important;
   height: var(--ui-field-height) !important;
   max-height: var(--ui-field-height) !important;
@@ -221,29 +216,33 @@ body[data-ui-lang='ur'] div[class*='-control'] {
 }
 
 body[data-ui-lang='ur'] .app-select__value-container,
-body[data-ui-lang='ur'] div[class*='-valueContainer'] {
+body[data-ui-lang='ur'] .app-select div[class*='-valueContainer'] {
   min-height: 100% !important;
   height: 100% !important;
-  display: flex !important;
   align-items: center !important;
   padding-block: 0 !important;
 }
 
+body[data-ui-lang='ur'] .app-select__value-container:not(.app-select__value-container--is-multi),
+body[data-ui-lang='ur'] .app-select div[class*='-valueContainer']:not([class*='--is-multi']) {
+  display: grid !important;
+}
+
 body[data-ui-lang='ur'] .app-select__single-value,
 body[data-ui-lang='ur'] .app-select__placeholder,
-body[data-ui-lang='ur'] div[class*='-singleValue'],
-body[data-ui-lang='ur'] div[class*='-placeholder'] {
+body[data-ui-lang='ur'] .app-select div[class*='-singleValue'],
+body[data-ui-lang='ur'] .app-select div[class*='-placeholder'] {
+  grid-area: 1 / 1 / 2 / 3 !important;
   display: flex !important;
   align-items: center !important;
+  height: 100% !important;
   margin: 0 !important;
-  line-height: 1.25 !important;
-  padding-block-start: 0.1rem !important;
-  padding-block-end: 0 !important;
-  transform: none !important;
+  line-height: 1 !important;
+  padding-block: 0 !important;
 }
 
 body[data-ui-lang='ur'] .app-select__indicators,
-body[data-ui-lang='ur'] div[class*='-indicatorsContainer'] {
+body[data-ui-lang='ur'] .app-select div[class*='-indicatorsContainer'] {
   height: 100% !important;
   align-items: center !important;
 }
@@ -322,8 +321,7 @@ body[data-ui-lang='ur'] .app-tabs__tab,
 body[data-ui-lang='ur'] .nav-tabs .nav-link {
   font-size: var(--ds-text-button-ur, 0.78rem);
   line-height: 1 !important;
-  padding-block-start: 0.12rem !important;
-  padding-block-end: 0 !important;
+  padding-block: 0 !important;
   transform: none !important;
 }
 
@@ -359,8 +357,7 @@ body[data-ui-lang='ur'] .finance-dash__badge,
 body[data-ui-lang='ur'] .exam-audit__badge,
 html[dir='rtl'] .dashboard-chart-summary__pill {
   min-height: var(--ds-badge-height-ur, 2rem);
-  padding-block-start: 0.32rem;
-  padding-block-end: 0.18rem;
+  padding-block: 0.25rem;
   font-size: var(--ds-badge-font-ur, 0.8125rem);
   line-height: 1.2 !important;
   gap: 0.45rem;
@@ -374,13 +371,13 @@ html[dir='rtl'] .dashboard-chart-summary__pill {
 }
 
 body[data-ui-lang='ur'] .dashboard-chart-summary__pill-label {
-  padding-block-start: 0.06em;
+  padding-block: 0;
 }
 
 body[data-ui-lang='ur'] .dashboard-chart-summary__pill-value,
 html[dir='rtl'] .dashboard-chart-summary__pill-value {
   /* Latin numerals: keep geometric center next to Nastaliq label */
-  transform: translateY(0);
+  transform: none;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
@@ -406,8 +403,9 @@ html[dir='rtl'] .student-registration-print__grid td,
 html[dir='rtl'] .student-registration-print__grid th,
 html[dir='rtl'] .student-registration-print__data-table td,
 html[dir='rtl'] .student-registration-print__data-table th {
-  padding-block: var(--ds-table-cell-pad-y-ur, 0.7rem);
-  line-height: var(--ds-leading-urdu, 1.85);
+  padding-block: var(--ds-table-cell-pad-y-ur, 0.65rem);
+  line-height: 1.45;
+  vertical-align: middle !important;
 }
 
 .student-registration-print__section-title {
@@ -438,7 +436,7 @@ html[dir='rtl'] .student-registration-print__section-title {
 body[data-ui-lang='ur'] .sidebar-menu-link__line,
 html[dir='rtl'] .sidebar-menu-link__line {
   line-height: var(--ds-leading-urdu, 1.85);
-  padding-block-start: 0.05em;
+  padding-block: 0;
 }
 
 body[data-ui-lang='ur'] .sidebar-menu-link,

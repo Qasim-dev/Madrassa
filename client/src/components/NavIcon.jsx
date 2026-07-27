@@ -134,6 +134,14 @@ export default function NavIcon({ name, className = '' }) {
           <path d="M8 7h8M8 11h6" />
         </svg>
       )
+    case 'idcard':
+      return (
+        <svg {...common}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <circle cx="9" cy="12" r="2.5" />
+          <path d="M14 10h4M14 14h3" />
+        </svg>
+      )
     default:
       return (
         <svg {...common}>

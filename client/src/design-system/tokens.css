@@ -78,8 +78,7 @@
   --ds-shadow-focus: 0 0 0 4px var(--ds-primary-ring);
 
   /* ── Typography ────────────────────────────────────────────── */
-  --ds-font-urdu: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq Kasheeda', 'Jameel Noori Nastaleeq',
-    'Segoe UI', serif;
+  --ds-font-urdu: 'Noto Nastaliq Urdu', serif;
   --ds-font-latin: 'Inter', system-ui, 'Segoe UI', sans-serif;
 
   --ds-text-display: clamp(1.75rem, 2.5vw, 2.25rem);
@@ -146,10 +145,10 @@
   --ds-subtitle-content-gap: 1.25rem; /* 20px */
   --ds-subtitle-content-gap-ur: 1.5rem; /* 24px */
 
-  /* Nastaliq optical centering — keep pads tight so buttons stay compact */
-  --ds-urdu-pad-block-start: 0.14rem;
-  --ds-urdu-pad-block-end: 0.08rem;
-  --ds-urdu-optical-nudge: 0.04em;
+  /* Nastaliq optical centering — equal pads (asymmetric top pad looked bottom-heavy) */
+  --ds-urdu-pad-block-start: 0;
+  --ds-urdu-pad-block-end: 0;
+  --ds-urdu-optical-nudge: 0;
 
   /* Urdu secondary type (hints, captions, toolbar labels) */
   --ds-text-caption-ur: 0.8125rem;
@@ -171,7 +170,7 @@
 
   /* Table / print cell rhythm */
   --ds-table-cell-pad-y: 0.55rem;
-  --ds-table-cell-pad-y-ur: 0.7rem;
+  --ds-table-cell-pad-y-ur: 0.6rem;
   --ds-table-cell-pad-x: 0.65rem;
 
   /* Form rhythm */
@@ -222,10 +221,10 @@
   --theme-field-height-mobile: var(--ds-control-height-sm);
   --theme-field-pad-x: 0.875rem;
   --theme-field-pad-y: 0.4rem;
-  --theme-field-pad-y-urdu: 0.42rem;
+  --theme-field-pad-y-urdu: 0;
   --theme-field-font-size: 0.875rem;
   --theme-field-line-height: 1.45;
-  --theme-field-line-height-urdu: 1.95;
+  --theme-field-line-height-urdu: 1.35;
   --theme-field-shadow: none;
   --theme-field-shadow-focus: 0 0 0 4px rgba(15, 143, 95, 0.12);
   --theme-card-shadow: var(--ds-shadow-sm);

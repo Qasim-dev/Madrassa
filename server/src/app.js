@@ -26,6 +26,8 @@ import examsRoutes from './routes/exams.routes.js';
 import bookReadingRoutes from './routes/bookReading.routes.js';
 import libraryRoutes from './routes/library.routes.js';
 import speechesRoutes from './routes/speeches.routes.js';
+import idCardsRoutes from './routes/idCards.routes.js';
+import publicIdCardsRoutes from './routes/publicIdCards.routes.js';
 
 export function createApp() {
   const app = express();
@@ -38,6 +40,7 @@ export function createApp() {
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/public/id-cards', publicIdCardsRoutes);
 
   app.use('/api/dashboard', requireAuth, dashboardRoutes);
   app.use('/api/students', requireAuth, studentsRoutes);
@@ -60,6 +63,7 @@ export function createApp() {
   app.use('/api/book-reading', requireAuth, bookReadingRoutes);
   app.use('/api/library', requireAuth, libraryRoutes);
   app.use('/api/speeches', requireAuth, speechesRoutes);
+  app.use('/api/id-cards', requireAuth, idCardsRoutes);
 
   app.use(errorHandler);
   return app;

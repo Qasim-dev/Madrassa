@@ -430,7 +430,7 @@ export default function TartibatDarajatPage() {
                   ))}
                 </AppSelect>
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="ur">
                 <BilingualLabel k="darjahNameUr" htmlFor="dj-u" data-lang-field="ur" />
                 <AppInput
                   id="dj-u"
@@ -441,7 +441,7 @@ export default function TartibatDarajatPage() {
                   dir="rtl"
                 />
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="en">
                 <BilingualLabel k="darjahNameEn" htmlFor="dj-e" data-lang-field="en" />
                 <AppInput
                   id="dj-e"

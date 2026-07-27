@@ -39,6 +39,11 @@ export const FL = {
   // Sidebar items (nav)
   navDashboard: { ur: 'ڈیش بورڈ', en: 'Dashboard' },
   navStudents: { ur: 'طلباء', en: 'Students' },
+  navIdCards: { ur: 'شناختی کارڈز', en: 'Student ID Cards' },
+  navIdCardsHub: { ur: 'جنریٹ / پرنٹ', en: 'Generate / Print' },
+  navIdCardsPrint: { ur: 'پرنٹ پریویو', en: 'Print preview' },
+  navIdCardsTemplates: { ur: 'ٹیمپلیٹس', en: 'Templates' },
+  navIdCardsHistory: { ur: 'پرنٹ ہسٹری', en: 'Print history' },
   navTeachers: { ur: 'اساتذہ', en: 'Teachers' },
   navGrades: { ur: 'درجات', en: 'Grades' },
   navAttendance: { ur: 'حاضری', en: 'Attendance' },

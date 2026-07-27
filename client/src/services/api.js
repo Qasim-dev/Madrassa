@@ -27,7 +27,7 @@ const baseQuery = async (args, apiRTK, extraOptions) => {
   if (httpStatus(result.error) === 401) {
     const token = apiRTK.getState().auth.token
     const url = typeof args === 'string' ? args : args?.url || ''
-    const isPublicAuth = /auth\/(login|register)/.test(url)
+    const isPublicAuth = /auth\/(login|register)|public\//.test(url)
     if (token && !isPublicAuth && !loggingOut) {
       loggingOut = true
       apiRTK.dispatch(logout())
@@ -63,6 +63,7 @@ export const api = createApi({
     'BookReading',
     'Library',
     'Speech',
+    'IdCard',
   ],
   endpoints: (builder) => ({
     login: builder.mutation({
@@ -494,6 +495,33 @@ export const api = createApi({
     deleteSpeech: builder.mutation({
       query: (id) => ({ url: `speeches/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Speech'],
+    }),
+    getIdCardTemplates: builder.query({
+      query: () => 'id-cards/templates',
+      providesTags: ['IdCard'],
+    }),
+    getIdCardStudents: builder.query({
+      query: (params) => ({ url: 'id-cards/cards', params }),
+      providesTags: ['IdCard'],
+    }),
+    generateIdCards: builder.mutation({
+      query: (body) => ({ url: 'id-cards/cards/generate', method: 'POST', body }),
+      invalidatesTags: ['IdCard'],
+    }),
+    getIdCardPrintPayload: builder.query({
+      query: (params) => ({ url: 'id-cards/cards/print-payload', params }),
+      providesTags: ['IdCard'],
+    }),
+    getIdCardPrintHistory: builder.query({
+      query: (params) => ({ url: 'id-cards/print-history', params }),
+      providesTags: ['IdCard'],
+    }),
+    logIdCardPrint: builder.mutation({
+      query: (body) => ({ url: 'id-cards/print-history', method: 'POST', body }),
+      invalidatesTags: ['IdCard'],
+    }),
+    verifyIdCard: builder.query({
+      query: (token) => `public/id-cards/verify/${token}`,
     }),
     getSettings: builder.query({
       query: () => 'settings',
@@ -1051,4 +1079,11 @@ export const {
   useCreateSpeechMutation,
   useUpdateSpeechMutation,
   useDeleteSpeechMutation,
+  useGetIdCardTemplatesQuery,
+  useGetIdCardStudentsQuery,
+  useGenerateIdCardsMutation,
+  useGetIdCardPrintPayloadQuery,
+  useGetIdCardPrintHistoryQuery,
+  useLogIdCardPrintMutation,
+  useVerifyIdCardQuery,
 } = api

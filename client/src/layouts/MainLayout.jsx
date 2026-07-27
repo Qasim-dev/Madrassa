@@ -42,6 +42,16 @@ const menuGroups = [
     ],
   },
   {
+    labelKey: 'navIdCards',
+    icon: 'idcard',
+    items: [
+      { to: '/id-cards', navKey: 'navIdCardsHub', icon: 'idcard', end: true },
+      { to: '/id-cards/print', navKey: 'navIdCardsPrint', icon: 'idcard' },
+      { to: '/id-cards/templates', navKey: 'navIdCardsTemplates', icon: 'idcard' },
+      { to: '/id-cards/history', navKey: 'navIdCardsHistory', icon: 'idcard' },
+    ],
+  },
+  {
     labelKey: 'groupOperations',
     icon: 'attendance',
     items: [

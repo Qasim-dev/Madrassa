@@ -5,7 +5,12 @@ import { useTranslation } from 'react-i18next'
 const ROUTES = [
   { path: '/teachers/new', labelKey: 'nav.teachers' },
   { path: '/teachers/:id/edit', labelKey: 'nav.teachers' },
+  { path: '/id-cards/print', labelKey: 'nav.idCards' },
+  { path: '/id-cards/templates', labelKey: 'nav.idCards' },
+  { path: '/id-cards/history', labelKey: 'nav.idCards' },
+  { path: '/id-cards', labelKey: 'nav.idCards' },
   { path: '/students/new', labelKey: 'nav.students' },
+  { path: '/students/print-cards', labelKey: 'nav.students' },
   { path: '/students/:id/edit', labelKey: 'nav.students' },
   { path: '/students/:id/print', labelKey: 'nav.students' },
   { path: '/book-reading/:id', labelKey: 'nav.bookReading' },

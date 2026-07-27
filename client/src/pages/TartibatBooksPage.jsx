@@ -414,7 +414,7 @@ export default function TartibatBooksPage() {
                   ))}
                 </AppSelect>
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="ur">
                 <BilingualLabel k="bookTitleUr" htmlFor="bk-u" data-lang-field="ur" />
                 <AppInput
                   id="bk-u"
@@ -425,7 +425,7 @@ export default function TartibatBooksPage() {
                   dir="rtl"
                 />
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="en">
                 <BilingualLabel k="bookTitleEn" htmlFor="bk-e" data-lang-field="en" />
                 <AppInput
                   id="bk-e"
@@ -436,7 +436,7 @@ export default function TartibatBooksPage() {
                     onChange={(e) => setForm({ ...form, title: { ...form.title, en: e.target.value } })}
                 />
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="ur">
                 <BilingualLabel k="bookAuthorUr" htmlFor="bk-au" data-lang-field="ur" />
                 <AppInput
                   id="bk-au"
@@ -447,7 +447,7 @@ export default function TartibatBooksPage() {
                   dir="rtl"
                 />
               </div>
-              <div className="mb-2">
+              <div className="mb-2" data-lang-field="en">
                 <BilingualLabel k="bookAuthorEn" htmlFor="bk-ae" data-lang-field="en" />
                 <AppInput
                   id="bk-ae"

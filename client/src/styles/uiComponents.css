@@ -308,18 +308,18 @@ body[data-ui-lang='ur'] .app-field > .bilingual-label {
   max-height: var(--ui-field-height);
   padding: 0 var(--ui-field-pad-x);
   font-size: var(--ui-field-font-size);
+  line-height: 1.25;
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
+  /* Native <input>/<select>: flex breaks vertical text centering in browsers */
+  display: block;
 }
 
 /* Nastaliq: keep text readable inside the shared field height (no extra vertical growth) */
 html[dir='rtl'] .app-field__control:not(.app-field__control--latin):not([type='file']),
 body[data-ui-lang='ur'] .app-field__control:not(.app-field__control--latin):not([type='file']) {
-  line-height: 1.45;
+  line-height: 1.25;
   padding-top: 0;
   padding-bottom: 0;
-  /* overflow: hidden; */
 }
 
 body[data-ui-lang='ur'] {
@@ -927,11 +927,21 @@ html[dir='rtl'] select.form-select:not(.app-field__control) {
 }
 
 .app-select__value-container {
+  /* Prefer grid (react-select v5) so value + input share one centered cell */
   flex: 1 1 auto !important;
   min-width: 0 !important;
+  min-height: 100% !important;
+  height: 100% !important;
   overflow: hidden !important;
   flex-wrap: nowrap !important;
   align-items: center !important;
+  padding-block: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.app-select__value-container:not(.app-select__value-container--is-multi),
+.app-select__value-container:not([class*='--is-multi']) {
+  display: grid !important;
 }
 
 .app-select__indicators {
@@ -952,20 +962,31 @@ html[dir='rtl'] select.form-select:not(.app-field__control) {
 }
 
 .app-select__single-value,
-.app-select__placeholder {
+.app-select__placeholder,
+.app-select div[class*='-singleValue'],
+.app-select div[class*='-placeholder'] {
+  grid-area: 1 / 1 / 2 / 3 !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.45;
+  line-height: 1 !important;
+  box-sizing: border-box;
 }
 
 html[dir='rtl'] .app-select__single-value,
 html[dir='rtl'] .app-select__placeholder,
 body[data-ui-lang='ur'] .app-select__single-value,
 body[data-ui-lang='ur'] .app-select__placeholder {
-  line-height: 1.45;
+  line-height: 1 !important;
   overflow-x: hidden;
+  padding-block: 0 !important;
 }
 
 .app-select__menu,

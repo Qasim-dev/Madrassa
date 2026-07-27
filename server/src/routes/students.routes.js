@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import { Student } from '../models/Student.js';
+import { SubjectBook } from '../models/SubjectBook.js';
 import { uploadPhoto } from '../config/upload.js';
 import { nextRollNumberForGrade } from '../utils/assignRollNumber.js';
 import { allocateNextStudentId, previewNextStudentId } from '../utils/studentId.js';
@@ -11,7 +12,6 @@ import {
   resolveSessionId,
   resolveDarjahId,
   resolveSubjectId,
-  resolveBookId,
   resolveGradeId,
 } from '../utils/excelImportResolve.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
@@ -26,18 +26,30 @@ function normalizeIdFields(obj, fields) {
   }
 }
 
-function normalizeStudentBooks(body) {
-  if (Array.isArray(body.bookIds)) {
-    body.bookIds = body.bookIds
-      .map((id) => (id && mongoose.isValidObjectId(String(id)) ? String(id) : null))
-      .filter(Boolean);
-    if (body.bookIds.length) body.bookId = body.bookIds[0];
-    else if (body.bookId === '') body.bookId = null;
-  } else if (body.bookId && mongoose.isValidObjectId(String(body.bookId))) {
-    body.bookIds = [String(body.bookId)];
-  } else if (body.bookIds === undefined && !body.bookId) {
+/** Assign every active SubjectBook for the student's subject + darjah. */
+async function assignAllBooksForClass(tenantId, body) {
+  const subjectId = body.subjectId;
+  const darjahId = body.darjahId;
+  if (
+    !subjectId ||
+    !darjahId ||
+    !mongoose.isValidObjectId(String(subjectId)) ||
+    !mongoose.isValidObjectId(String(darjahId))
+  ) {
     body.bookIds = [];
+    body.bookId = null;
+    return;
   }
+  const ids = await SubjectBook.find({
+    tenantId,
+    subjectId,
+    darjahId,
+    isActive: { $ne: false },
+  })
+    .select('_id')
+    .lean();
+  body.bookIds = ids.map((d) => String(d._id));
+  body.bookId = body.bookIds[0] || null;
 }
 
 router.get('/next-student-id', async (req, res, next) => {
@@ -116,13 +128,6 @@ router.post('/import', uploadExcel.single('file'), async (req, res, next) => {
       }
       body.subjectId = subjectId;
 
-      const bookId = await resolveBookId(req.tenantId, f.bookRaw, { subjectId, darjahId });
-      if (f.bookRaw && !bookId) {
-        errors.push(`book not found: "${f.bookRaw}"`);
-      }
-      body.bookId = bookId;
-      body.bookIds = bookId ? [bookId] : [];
-
       const gradeId = await resolveGradeId(req.tenantId, sessionId, f.gradeRaw);
       if (f.gradeRaw && !gradeId) {
         errors.push(`grade not found: "${f.gradeRaw}"`);
@@ -140,9 +145,9 @@ router.post('/import', uploadExcel.single('file'), async (req, res, next) => {
         'previousGradeId',
         'darjahId',
         'subjectId',
-        'bookId',
         'teacherId',
       ]);
+      await assignAllBooksForClass(req.tenantId, body);
 
       body.city = f.city || body.cityLoc?.en || body.cityLoc?.ur || '';
 
@@ -228,7 +233,7 @@ router.get('/', async (req, res, next) => {
       filter.$or = or;
     }
     const gradePop = { path: 'responsibleTeacherId' };
-    const list = await Student.find(filter)
+    const query = Student.find(filter)
       .populate('sessionId')
       .populate('darjahId')
       .populate('subjectId')
@@ -238,8 +243,27 @@ router.get('/', async (req, res, next) => {
       .populate({ path: 'gradeId', populate: gradePop })
       .populate({ path: 'currentGradeId', populate: gradePop })
       .populate({ path: 'previousGradeId', populate: gradePop })
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ createdAt: -1 });
+
+    // Optional pagination — omit page/limit to keep full-array responses for picklists
+    const wantsPage = req.query.page != null && String(req.query.page).trim() !== '';
+    if (wantsPage) {
+      const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 10));
+      const total = await Student.countDocuments(filter);
+      const totalPages = Math.max(1, Math.ceil(total / limit) || 1);
+      const safePage = Math.min(page, totalPages);
+      const items = await query
+        .skip((safePage - 1) * limit)
+        .limit(limit)
+        .lean();
+      return res.json({
+        items,
+        pagination: { page: safePage, limit, total, totalPages },
+      });
+    }
+
+    const list = await query.lean();
     res.json(list);
   } catch (e) {
     next(e);
@@ -278,10 +302,9 @@ router.post('/', async (req, res, next) => {
       'previousGradeId',
       'darjahId',
       'subjectId',
-      'bookId',
       'teacherId',
     ]);
-    normalizeStudentBooks(body);
+    await assignAllBooksForClass(req.tenantId, body);
     if (!body.studentId || !String(body.studentId).trim()) {
       body.studentId = await allocateNextStudentId({ tenantId: req.tenantId, sessionId: body.sessionId });
     }
@@ -312,10 +335,15 @@ router.put('/:id', async (req, res, next) => {
       'previousGradeId',
       'darjahId',
       'subjectId',
-      'bookId',
       'teacherId',
     ]);
-    normalizeStudentBooks(body);
+    const classBooks = {
+      subjectId: body.subjectId !== undefined ? body.subjectId : existing.subjectId,
+      darjahId: body.darjahId !== undefined ? body.darjahId : existing.darjahId,
+    };
+    await assignAllBooksForClass(req.tenantId, classBooks);
+    body.bookIds = classBooks.bookIds;
+    body.bookId = classBooks.bookId;
 
     const mergedGradeId =
       body.currentGradeId !== undefined ? body.currentGradeId : existing.currentGradeId;
