@@ -64,12 +64,12 @@ function IdCardVerifyInner() {
 
       <div className="id-cards-verify__grid">
         <div className="id-cards-verify__row">
-          <span>{en ? 'Class' : 'درجہ'}</span>
-          <strong>{className}</strong>
-        </div>
-        <div className="id-cards-verify__row">
           <span>{en ? 'Section' : 'شعبہ'}</span>
           <strong>{section}</strong>
+        </div>
+        <div className="id-cards-verify__row">
+          <span>{en ? 'Class' : 'درجہ'}</span>
+          <strong>{className}</strong>
         </div>
         <div className="id-cards-verify__row">
           <span>{en ? 'Session' : 'سیشن'}</span>
@@ -86,10 +86,6 @@ function IdCardVerifyInner() {
         <div className="id-cards-verify__row">
           <span>{en ? 'Guardian' : 'سرپرست'}</span>
           <strong>{loc(s.guardianName, lng) || '—'}</strong>
-        </div>
-        <div className="id-cards-verify__row">
-          <span>{en ? 'Contact' : 'رابطہ'}</span>
-          <strong dir="ltr">{s.guardianContact || s.emergencyContact || '—'}</strong>
         </div>
         <div className="id-cards-verify__row">
           <span>{en ? 'Valid until' : 'میعاد'}</span>
