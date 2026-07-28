@@ -1,7 +1,8 @@
-import { useEffect, useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { AppInput } from './ui'
+import { useFocusTrap } from '../shared/useFocusTrap'
 
 /**
  * Side filter panel.
@@ -20,8 +21,10 @@ export default function FilterDrawer({
 }) {
   const { t, i18n } = useTranslation()
   const titleId = useId()
+  const panelRef = useRef(null)
   const isRtl = (dirProp || i18n.dir()) === 'rtl'
   const side = isRtl ? 'left' : 'right'
+  useFocusTrap(open, panelRef)
 
   useEffect(() => {
     if (!open) return undefined
@@ -45,12 +48,18 @@ export default function FilterDrawer({
 
   return createPortal(
     <div className={`filter-drawer-root${open ? ' is-open' : ''}`} aria-hidden={!open}>
-      <div className="filter-drawer-backdrop" onMouseDown={() => onClose?.()} />
+      <div
+        className="filter-drawer-backdrop"
+        onMouseDown={() => onClose?.()}
+        {...(open ? {} : { tabIndex: -1 })}
+      />
       <aside
+        ref={panelRef}
         className={`filter-drawer filter-drawer--${side}${open ? ' is-open' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
         dir={dirProp || (isRtl ? 'rtl' : 'ltr')}
         onMouseDown={(e) => e.stopPropagation()}
       >

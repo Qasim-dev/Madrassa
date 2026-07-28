@@ -1,5 +1,7 @@
-import { useEffect, useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
+import { useFocusTrap } from '../shared/useFocusTrap'
 
 /**
  * Shared modal frame: backdrop, elevated card, title row. Put `<form className="modal-app-form">` inside with
@@ -16,7 +18,10 @@ export default function AppModalShell({
   dialogClassName = '',
   dir: dirAttr,
 }) {
+  const { t } = useTranslation()
   const titleId = useId()
+  const dialogRef = useRef(null)
+  useFocusTrap(open, dialogRef)
 
   useEffect(() => {
     if (!open) return undefined
@@ -41,17 +46,20 @@ export default function AppModalShell({
   return createPortal(
     <div
       className="modal-app-backdrop no-print"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
+      role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose?.()
       }}
     >
       <div
+        ref={dialogRef}
         className={['modal-app-dialog', size === 'lg' ? 'modal-app-dialog--lg' : '', dialogClassName]
           .filter(Boolean)
           .join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         dir={dirAttr || undefined}
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -65,7 +73,7 @@ export default function AppModalShell({
             <button
               type="button"
               className="modal-app-close-btn"
-              aria-label="Close"
+              aria-label={t('common.cancel')}
               onClick={() => onClose?.()}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
