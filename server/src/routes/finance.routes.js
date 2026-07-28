@@ -13,6 +13,7 @@ import { Student } from '../models/Student.js';
 import { Teacher } from '../models/Teacher.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 import { recordAccountTransfer } from '../services/financeFlows.js';
+import { NOT_DELETED } from '../utils/softDelete.js';
 
 const router = Router();
 
@@ -673,6 +674,7 @@ router.get('/overview', async (req, res, next) => {
       const studIds = await Student.find({
         tenantId,
         sessionId,
+        ...NOT_DELETED,
       }).distinct('_id');
       balMatch.studentId = { $in: studIds };
     }

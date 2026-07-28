@@ -12,6 +12,7 @@ import { Student } from '../models/Student.js';
 import { Darjah } from '../models/Darjah.js';
 import { Subject } from '../models/Subject.js';
 import { computeDivision } from '../constants/examEnums.js';
+import { NOT_DELETED } from '../utils/softDelete.js';
 
 /** Reject queries missing mandatory session/exam scope */
 export function assertSessionScope(sessionId, examId) {
@@ -246,7 +247,7 @@ export async function generateStudentSnapshot({ tenantId, sessionId, examId, dar
     throw err;
   }
 
-  const students = await Student.find({ tenantId, sessionId, darjahId, exitDate: null });
+  const students = await Student.find({ tenantId, sessionId, darjahId, exitDate: null, ...NOT_DELETED });
   const sectionIds = [...new Set(students.map((s) => String(s.subjectId || '')).filter(Boolean))];
   const sections = sectionIds.length
     ? await Subject.find({ _id: { $in: sectionIds }, tenantId })

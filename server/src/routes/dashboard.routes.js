@@ -17,6 +17,7 @@ import { StudentAttendance } from '../models/StudentAttendance.js';
 import { TeacherAttendance } from '../models/TeacherAttendance.js';
 import { Transaction } from '../models/Transaction.js';
 import { todayLocalBounds } from '../utils/attendanceDate.js';
+import { NOT_DELETED } from '../utils/softDelete.js';
 
 const router = Router();
 
@@ -195,7 +196,9 @@ router.get('/stats', async (req, res, next) => {
     const sessionOid = parseSessionOid(req.query.sessionId);
     const { start, end } = todayLocalBounds();
 
-    const studentFilter = sessionOid ? { tenantId, sessionId: sessionOid } : { tenantId };
+    const studentFilter = sessionOid
+      ? { tenantId, sessionId: sessionOid, ...NOT_DELETED }
+      : { tenantId, ...NOT_DELETED };
     const teacherFilter = sessionOid
       ? { tenantId, assignments: { $elemMatch: { sessionId: sessionOid } } }
       : { tenantId };

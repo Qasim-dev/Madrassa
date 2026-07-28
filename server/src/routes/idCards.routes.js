@@ -5,6 +5,7 @@ import { IdCardTemplate } from '../models/IdCardTemplate.js';
 import { StudentIdCard } from '../models/StudentIdCard.js';
 import { IdCardPrintHistory } from '../models/IdCardPrintHistory.js';
 import { Student } from '../models/Student.js';
+import { withNotDeleted, NOT_DELETED } from '../utils/softDelete.js';
 
 const router = Router();
 
@@ -50,7 +51,7 @@ async function ensureTemplates(tenantId) {
 
 function buildStudentFilter(req) {
   const { q, sessionId, darjahId, subjectId, gender, gradeId } = req.query;
-  const filter = { tenantId: req.tenantId };
+  const filter = withNotDeleted({ tenantId: req.tenantId });
   if (sessionId && mongoose.isValidObjectId(sessionId)) filter.sessionId = sessionId;
   if (darjahId && mongoose.isValidObjectId(darjahId)) filter.darjahId = darjahId;
   if (subjectId && mongoose.isValidObjectId(subjectId)) filter.subjectId = subjectId;
@@ -204,6 +205,7 @@ router.post('/cards/generate', async (req, res, next) => {
     const students = await Student.find({
       tenantId: req.tenantId,
       _id: { $in: ids },
+      ...NOT_DELETED,
     })
       .select('_id sessionId')
       .lean();
@@ -271,6 +273,7 @@ router.get('/cards/print-payload', async (req, res, next) => {
     const students = await Student.find({
       tenantId: req.tenantId,
       _id: { $in: ids },
+      ...NOT_DELETED,
     })
       .populate(studentPopulate)
       .lean();

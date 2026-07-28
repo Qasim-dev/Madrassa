@@ -6,6 +6,7 @@ import { Teacher } from '../models/Teacher.js';
 import { Darjah } from '../models/Darjah.js';
 import { Subject } from '../models/Subject.js';
 import { SubjectBook } from '../models/SubjectBook.js';
+import { NOT_DELETED } from '../utils/softDelete.js';
 
 const router = Router();
 
@@ -32,6 +33,7 @@ router.get('/suggest', async (req, res, next) => {
     const [students, teachers, darajat, subjects, books] = await Promise.all([
       Student.find({
         tenantId,
+        ...NOT_DELETED,
         $or: [{ studentId: rx }, { 'name.ur': rx }, { 'name.en': rx }, { 'fatherName.ur': rx }, { 'fatherName.en': rx }],
       })
         .select({ _id: 1, studentId: 1, name: 1, fatherName: 1 })

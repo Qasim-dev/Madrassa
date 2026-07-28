@@ -18,6 +18,7 @@ import {
   timetableDayFromDateInput,
 } from '../utils/attendanceDate.js';
 import { ensureAttendanceDefaults, getCategoryByCode } from './attendanceSeed.service.js';
+import { NOT_DELETED } from '../utils/softDelete.js';
 
 function oid(v) {
   if (!v || !mongoose.isValidObjectId(String(v))) return null;
@@ -676,7 +677,7 @@ export async function getStudentRoster(
   { gradeId, darjahId, courseSubjectId, bookId, sessionId, categoryCode } = {}
 ) {
   const category = await getCategoryByCode(tenantId, categoryCode || 'academic');
-  const filter = { tenantId };
+  const filter = { tenantId, ...NOT_DELETED };
 
   if (sessionId) filter.sessionId = oid(sessionId);
 
