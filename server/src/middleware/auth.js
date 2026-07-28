@@ -1,4 +1,4 @@
-import { verifyToken } from '../utils/jwt.js';
+import { verifyAccessToken } from '../utils/jwt.js';
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization;
@@ -6,7 +6,7 @@ export function requireAuth(req, res, next) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
   try {
-    const payload = verifyToken(header.slice(7));
+    const payload = verifyAccessToken(header.slice(7));
     req.user = payload;
     req.tenantId = payload.tenantId;
     return next();

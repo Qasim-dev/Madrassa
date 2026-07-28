@@ -57,7 +57,14 @@ export default function SignupPage() {
         email: email.trim(),
         password,
       }).unwrap()
-      dispatch(setCredentials({ token: data.token, user: data.user, remember: true }))
+      dispatch(
+        setCredentials({
+          token: data.token || data.accessToken,
+          refreshToken: data.refreshToken,
+          user: data.user,
+          remember: true,
+        })
+      )
     } catch {
       /* handled */
     }

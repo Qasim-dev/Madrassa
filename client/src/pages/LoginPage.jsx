@@ -195,7 +195,14 @@ export default function LoginPage() {
     e.preventDefault()
     try {
       const data = await login({ email: email.trim(), password }).unwrap()
-      dispatch(setCredentials({ token: data.token, user: data.user, remember }))
+      dispatch(
+        setCredentials({
+          token: data.token || data.accessToken,
+          refreshToken: data.refreshToken,
+          user: data.user,
+          remember,
+        })
+      )
     } catch {
       /* handled */
     }
@@ -353,6 +360,9 @@ export default function LoginPage() {
                 />
                 {t('auth.signin.remember')}
               </label>
+              <Link to="/forgot-password" className="small">
+                {t('auth.forgotPasswordLink', { defaultValue: isUr ? 'پاس ورڈ بھول گئے؟' : 'Forgot password?' })}
+              </Link>
             </div>
 
             {errMsg ? (

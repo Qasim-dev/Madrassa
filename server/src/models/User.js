@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true, select: false },
     preferredLocale: { type: String, enum: ['ur', 'en'], default: 'ur' },
     role: { type: String, enum: ['admin', 'staff'], default: 'admin' },
+    /** Hashed refresh JWT jti / token for revocation */
+    refreshTokenHash: { type: String, select: false, default: '' },
+    passwordResetTokenHash: { type: String, select: false, default: '' },
+    passwordResetExpires: { type: Date, select: false, default: null },
   },
   { timestamps: true }
 );
