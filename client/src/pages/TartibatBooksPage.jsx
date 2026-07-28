@@ -12,14 +12,23 @@ import {
 } from '../services/api'
 import { loc } from '../shared/localized'
 import DataTable from '../components/DataTable'
-import { AppInput, AppSelect, AppCheckbox } from '../components/ui'
+import { AppInput, AppSelect, AppCheckbox, FormField } from '../components/ui'
 import PageHeading from '../components/PageHeading'
 import AppModalShell from '../components/AppModalShell'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
-import BilingualLabel from '../components/BilingualLabel'
 import FilterDrawer, { FilterToolbar } from '../components/FilterDrawer'
+import { useFormValidation, numberMin } from '../shared/validation'
+import { bookFormSchema } from '../shared/validation/formSchemas'
 
 const emptyLoc = () => ({ ur: '', en: '' })
+
+const FIELD_IDS = {
+  sessionId: 'bk-ses',
+  subjectId: 'bk-sub',
+  darjahId: 'bk-dj',
+  'title.ur': 'bk-u',
+  totalPages: 'bk-pages',
+}
 
 export default function TartibatBooksPage() {
   const { t, i18n } = useTranslation()
@@ -116,6 +125,22 @@ export default function TartibatBooksPage() {
     totalPages: '',
     isActive: true,
   })
+  const [saving, setSaving] = useState(false)
+
+  const schema = useMemo(() => ({ ...bookFormSchema, totalPages: numberMin(1) }), [])
+  const {
+    errors: fieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+    setErrors,
+  } = useFormValidation({
+    schema,
+    t,
+    fieldIds: FIELD_IDS,
+    order: ['sessionId', 'subjectId', 'darjahId', 'title.ur', 'totalPages'],
+  })
 
   const { data: darajatForm = [] } = useGetDarajatQuery(
     form.sessionId ? { sessionId: form.sessionId } : undefined,
@@ -144,6 +169,7 @@ export default function TartibatBooksPage() {
       totalPages: '',
       isActive: true,
     })
+    setErrors({})
     setModal(true)
   }
 
@@ -164,13 +190,17 @@ export default function TartibatBooksPage() {
       totalPages: x.totalPages ?? '',
       isActive: x.isActive !== false,
     })
+    setErrors({})
     setModal(true)
   }
 
   async function save(e) {
     e.preventDefault()
-    if (!form.sessionId || !form.darjahId || !form.subjectId) return
-    if (!form.title.ur.trim() && !form.title.en.trim()) return
+    const next = validateAll(form)
+    if (Object.keys(next).length) {
+      focusInvalid(next)
+      return
+    }
     const payload = {
       darjahId: form.darjahId,
       subjectId: form.subjectId,
@@ -179,14 +209,17 @@ export default function TartibatBooksPage() {
       isActive: form.isActive,
     }
     if (form.totalPages !== '') {
-      const tp = Number(form.totalPages)
-      if (!Number.isFinite(tp) || tp < 1) return
-      payload.totalPages = tp
+      payload.totalPages = Number(form.totalPages)
     }
-    if (editing) await updateOne({ id: editing._id, ...payload }).unwrap()
-    else await createOne(payload).unwrap()
-    setModal(false)
-    refetch()
+    setSaving(true)
+    try {
+      if (editing) await updateOne({ id: editing._id, ...payload }).unwrap()
+      else await createOne(payload).unwrap()
+      setModal(false)
+      refetch()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const columns = [
@@ -352,21 +385,21 @@ export default function TartibatBooksPage() {
         <AppModalShell title={editing ? t('common.edit') : t('common.add')} onClose={() => setModal(false)}>
           <form className="modal-app-form" onSubmit={save}>
             <div className="modal-app-body">
-              <div className="mb-2">
-                <BilingualLabel k="sessionTitle" htmlFor="bk-ses" required />
+              <FormField k="sessionTitle" htmlFor="bk-ses" required className="mb-2" error={fieldErrors.sessionId}>
                 <AppSelect
                   id="bk-ses"
-                 
                   value={form.sessionId}
-                  onChange={(e) =>
-                    setForm({
+                  onChange={(e) => {
+                    const next = {
                       ...form,
                       sessionId: e.target.value,
                       darjahId: '',
                       subjectId: '',
-                    })
-                  }
-                  required
+                    }
+                    setForm(next)
+                    revalidateIfError('sessionId', next)
+                  }}
+                  onBlur={() => onBlurField('sessionId', form)}
                 >
                   <option value="">—</option>
                   {sessions.map((s) => (
@@ -375,16 +408,18 @@ export default function TartibatBooksPage() {
                     </option>
                   ))}
                 </AppSelect>
-              </div>
-              <div className="mb-2">
-                <BilingualLabel k="subjectName" htmlFor="bk-sub" required />
+              </FormField>
+              <FormField k="subjectName" htmlFor="bk-sub" required className="mb-2" error={fieldErrors.subjectId}>
                 <AppSelect
                   id="bk-sub"
-                 
                   value={form.subjectId}
-                  onChange={(e) => setForm({ ...form, subjectId: e.target.value, darjahId: '' })}
+                  onChange={(e) => {
+                    const next = { ...form, subjectId: e.target.value, darjahId: '' }
+                    setForm(next)
+                    revalidateIfError('subjectId', next)
+                  }}
+                  onBlur={() => onBlurField('subjectId', form)}
                   disabled={!form.sessionId}
-                  required
                 >
                   <option value="">—</option>
                   {subjectsAll.map((s) => (
@@ -393,18 +428,24 @@ export default function TartibatBooksPage() {
                     </option>
                   ))}
                 </AppSelect>
-              </div>
-              <div className="mb-2">
-                <span className="form-label small d-block mb-1">
-                  {lng === 'ur' ? 'درجات (کلاس)' : 'Darjah (class)'}
-                </span>
+              </FormField>
+              <FormField
+                label={lng === 'ur' ? 'درجات (کلاس)' : 'Darjah (class)'}
+                htmlFor="bk-dj"
+                required
+                className="mb-2"
+                error={fieldErrors.darjahId}
+              >
                 <AppSelect
                   id="bk-dj"
-                 
                   value={form.darjahId}
-                  onChange={(e) => setForm({ ...form, darjahId: e.target.value })}
+                  onChange={(e) => {
+                    const next = { ...form, darjahId: e.target.value }
+                    setForm(next)
+                    revalidateIfError('darjahId', next)
+                  }}
+                  onBlur={() => onBlurField('darjahId', form)}
                   disabled={!form.subjectId}
-                  required
                 >
                   <option value="">—</option>
                   {darjahOptionsInForm.map((d) => (
@@ -413,64 +454,80 @@ export default function TartibatBooksPage() {
                     </option>
                   ))}
                 </AppSelect>
-              </div>
-              <div className="mb-2" data-lang-field="ur">
-                <BilingualLabel k="bookTitleUr" htmlFor="bk-u" data-lang-field="ur" />
+              </FormField>
+              <FormField
+                k="bookTitleUr"
+                htmlFor="bk-u"
+                className="mb-2"
+                langField="ur"
+                error={fieldErrors['title.ur']}
+              >
                 <AppInput
                   id="bk-u"
-                 
                   data-lang-field="ur"
                   value={form.title.ur}
-                  onChange={(e) => setForm({ ...form, title: { ...form.title, ur: e.target.value } })}
+                  onChange={(e) => {
+                    const next = { ...form, title: { ...form.title, ur: e.target.value } }
+                    setForm(next)
+                    revalidateIfError('title.ur', next)
+                  }}
+                  onBlur={() => onBlurField('title.ur', form)}
                   dir="rtl"
                 />
-              </div>
-              <div className="mb-2" data-lang-field="en">
-                <BilingualLabel k="bookTitleEn" htmlFor="bk-e" data-lang-field="en" />
+              </FormField>
+              <FormField k="bookTitleEn" htmlFor="bk-e" className="mb-2" langField="en">
                 <AppInput
                   id="bk-e"
-                 
                   data-lang-field="en"
                   value={form.title.en}
                   latin
-                    onChange={(e) => setForm({ ...form, title: { ...form.title, en: e.target.value } })}
+                  onChange={(e) => {
+                    const next = { ...form, title: { ...form.title, en: e.target.value } }
+                    setForm(next)
+                    revalidateIfError('title.ur', next)
+                  }}
+                  onBlur={() => onBlurField('title.ur', form)}
                 />
-              </div>
-              <div className="mb-2" data-lang-field="ur">
-                <BilingualLabel k="bookAuthorUr" htmlFor="bk-au" data-lang-field="ur" />
+              </FormField>
+              <FormField k="bookAuthorUr" htmlFor="bk-au" className="mb-2" langField="ur">
                 <AppInput
                   id="bk-au"
-                 
                   data-lang-field="ur"
                   value={form.author.ur}
                   onChange={(e) => setForm({ ...form, author: { ...form.author, ur: e.target.value } })}
                   dir="rtl"
                 />
-              </div>
-              <div className="mb-2" data-lang-field="en">
-                <BilingualLabel k="bookAuthorEn" htmlFor="bk-ae" data-lang-field="en" />
+              </FormField>
+              <FormField k="bookAuthorEn" htmlFor="bk-ae" className="mb-2" langField="en">
                 <AppInput
                   id="bk-ae"
-                 
                   data-lang-field="en"
                   value={form.author.en}
                   latin
-                    onChange={(e) => setForm({ ...form, author: { ...form.author, en: e.target.value } })}
+                  onChange={(e) => setForm({ ...form, author: { ...form.author, en: e.target.value } })}
                 />
-              </div>
-              <div className="mb-2">
-                <label className="form-label small" htmlFor="bk-pages">{t('bookReading.totalPages')}</label>
+              </FormField>
+              <FormField
+                label={t('bookReading.totalPages')}
+                htmlFor="bk-pages"
+                className="mb-2"
+                error={fieldErrors.totalPages}
+              >
                 <AppInput
                   id="bk-pages"
                   type="number"
                   min={1}
-                 
                   value={form.totalPages}
                   latin
-                    onChange={(e) => setForm({ ...form, totalPages: e.target.value })}
+                  onChange={(e) => {
+                    const next = { ...form, totalPages: e.target.value }
+                    setForm(next)
+                    revalidateIfError('totalPages', next)
+                  }}
+                  onBlur={() => onBlurField('totalPages', form)}
                   placeholder={t('bookReading.totalPagesHint')}
                 />
-              </div>
+              </FormField>
               <AppCheckbox
                 id="bk-act"
                 checked={!!form.isActive}
@@ -480,11 +537,11 @@ export default function TartibatBooksPage() {
               />
             </div>
             <div className="modal-app-footer">
-              <button type="button" className="btn btn-secondary" onClick={() => setModal(false)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModal(false)} disabled={saving}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" className="btn btn-success">
-                {t('common.save')}
+              <button type="submit" className="btn btn-success" disabled={saving}>
+                {saving ? t('validation.formSaving') : t('common.save')}
               </button>
             </div>
           </form>

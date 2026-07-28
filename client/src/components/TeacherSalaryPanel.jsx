@@ -16,9 +16,13 @@ import { useCalendarMode } from '../app/calendarMode'
 import DataTable from './DataTable'
 import AppModalShell from './AppModalShell'
 import ConfirmDeleteModal from './ConfirmDeleteModal'
-import { AppInput, AppSelect, AppTextarea } from './ui'
+import { AppInput, AppSelect, AppTextarea, FormField } from './ui'
 import { BtnIconLabel, IconPlus, IconPencil, IconTrash, IconPrint } from './ListToolbarIcons'
 import { useFlash } from '../app/flash.jsx'
+import { useFormValidation } from '../shared/validation'
+import { salaryFormSchema } from '../shared/validation/formSchemas'
+
+const SALARY_FIELD_IDS = { basicSalary: 'sal-basic', toDate: 'sal-to' }
 
 function num(v) {
   const n = parseFloat(String(v).replace(/,/g, ''))
@@ -114,6 +118,21 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [salaryDeleteTarget, setSalaryDeleteTarget] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const {
+    errors: fieldErrors,
+    setErrors: setFieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+  } = useFormValidation({
+    schema: salaryFormSchema,
+    t,
+    fieldIds: SALARY_FIELD_IDS,
+    order: ['basicSalary', 'toDate'],
+  })
 
   const { data: salaries = [], isLoading } = useGetTeacherSalariesQuery(teacherId, {
     skip: !teacherId,
@@ -160,8 +179,9 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
     if (!modal) {
       setForm(emptyForm())
       setEditingId(null)
+      setFieldErrors({})
     }
-  }, [modal])
+  }, [modal, setFieldErrors])
 
   useEffect(() => {
     if (fixedTeacherId) setTeacherId(String(fixedTeacherId))
@@ -171,18 +191,25 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
     if (!teacherId) return
     setEditingId(null)
     setForm(emptyForm())
+    setFieldErrors({})
     setModal('edit')
   }
 
   function openEdit(row) {
     setEditingId(row._id)
     setForm(mapRowToForm(row))
+    setFieldErrors({})
     setModal('edit')
   }
 
   async function save(e) {
     e.preventDefault()
     if (!teacherId) return
+    const nextErrors = validateAll(form)
+    if (Object.keys(nextErrors).length) {
+      focusInvalid(nextErrors)
+      return
+    }
     const payload = {
       teacherId,
       basicSalary: num(form.basicSalary),
@@ -198,16 +225,15 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
       notes: form.notes?.trim() || '',
       paymentStatus: form.paymentStatus,
     }
-    if (payload.basicSalary <= 0) {
-      showFlash(en ? 'Enter basic salary.' : 'بنیادی تنخواہ درج کریں۔')
-      return
-    }
+    setSaving(true)
     try {
       if (editingId) await updateSalary({ id: editingId, ...payload }).unwrap()
       else await createSalary(payload).unwrap()
       setModal(null)
     } catch (err) {
       showFlash(err?.data?.message || err?.error || 'Save failed')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -504,18 +530,21 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
             <div className="modal-app-body">
               <div className="row g-2">
                 <div className="col-md-4">
-                  <label className="form-label">
-                    {L.basic} <span className="text-danger">*</span>
-                  </label>
-                  <AppInput
-                    type="number"
-                    min={0}
-                    step={1}
-                   
-                    value={form.basicSalary}
-                    onChange={(e) => setForm({ ...form, basicSalary: e.target.value })}
-                    required
-                  />
+                  <FormField label={L.basic} htmlFor="sal-basic" required error={fieldErrors.basicSalary}>
+                    <AppInput
+                      id="sal-basic"
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={form.basicSalary}
+                      onChange={(e) => {
+                        const next = { ...form, basicSalary: e.target.value }
+                        setForm(next)
+                        revalidateIfError('basicSalary', next)
+                      }}
+                      onBlur={() => onBlurField('basicSalary', form)}
+                    />
+                  </FormField>
                 </div>
                 <div className="col-md-4">
                   <label className="form-label">{L.house}</label>
@@ -584,22 +613,32 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
                   />
                 </div>
                 <div className="col-md-4">
-                  <label className="form-label">{L.from}</label>
+                  <label className="form-label" htmlFor="sal-from">{L.from}</label>
                   <AppInput
+                    id="sal-from"
                     type="date"
-                   
                     value={form.fromDate}
-                    onChange={(e) => setForm({ ...form, fromDate: e.target.value })}
+                    onChange={(e) => {
+                      const next = { ...form, fromDate: e.target.value }
+                      setForm(next)
+                      revalidateIfError('toDate', next)
+                    }}
                   />
                 </div>
                 <div className="col-md-4">
-                  <label className="form-label">{L.to}</label>
-                  <AppInput
-                    type="date"
-                   
-                    value={form.toDate}
-                    onChange={(e) => setForm({ ...form, toDate: e.target.value })}
-                  />
+                  <FormField label={L.to} htmlFor="sal-to" error={fieldErrors.toDate}>
+                    <AppInput
+                      id="sal-to"
+                      type="date"
+                      value={form.toDate}
+                      onChange={(e) => {
+                        const next = { ...form, toDate: e.target.value }
+                        setForm(next)
+                        revalidateIfError('toDate', next)
+                      }}
+                      onBlur={() => onBlurField('toDate', form)}
+                    />
+                  </FormField>
                 </div>
                 <div className="col-md-4">
                   <label className="form-label text-success">{L.totalSal}</label>
@@ -666,11 +705,11 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
                 <BtnIconLabel icon={<IconPrint />}>{L.printSlip}</BtnIconLabel>
               </button>
               <div className="d-flex flex-wrap gap-2">
-                <button type="button" className="btn btn-secondary" onClick={() => setModal(null)}>
+                <button type="button" className="btn btn-secondary" onClick={() => setModal(null)} disabled={saving}>
                   {L.close}
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  {L.save}
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? t('validation.formSaving') : L.save}
                 </button>
               </div>
             </div>

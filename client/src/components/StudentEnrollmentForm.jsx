@@ -85,6 +85,9 @@ export default function StudentEnrollmentForm({
   startCam,
   captureCam,
   onPhotoFileChange,
+  fieldErrors = {},
+  onBlurField,
+  onClearError,
 }) {
   const { t } = useTranslation()
   const { mode } = useCalendarMode()
@@ -544,12 +547,21 @@ export default function StudentEnrollmentForm({
             </AppSelect>
           </FormField>
 
-          <FormField k="nameUrField" htmlFor="f-name-ur" col={4} langField="ur">
+          <FormField
+            k="nameUrField"
+            htmlFor="f-name-ur"
+            col={4}
+            langField="ur"
+            required
+            error={fieldErrors['name.ur']}
+          >
             <AppInput
               id="f-name-ur"
               data-lang-field="ur"
+              data-field="name.ur"
               value={form.name.ur}
               onChange={(e) => setForm({ ...form, name: { ...form.name, ur: e.target.value } })}
+              onBlur={() => onBlurField?.('name.ur')}
             />
           </FormField>
           <FormField k="nameEnField" htmlFor="f-name-en" col={4} langField="en">
@@ -557,7 +569,10 @@ export default function StudentEnrollmentForm({
               id="f-name-en"
               data-lang-field="en"
               value={form.name.en}
-              onChange={(e) => setForm({ ...form, name: { ...form.name, en: e.target.value } })}
+              onChange={(e) => {
+                setForm({ ...form, name: { ...form.name, en: e.target.value } })
+                onClearError?.('name.ur')
+              }}
             />
           </FormField>
           <FormField k="fatherUr" htmlFor="f-father-ur" col={4} langField="ur">
@@ -580,28 +595,33 @@ export default function StudentEnrollmentForm({
               }
             />
           </FormField>
-          <FormField k="phone" htmlFor="f-phone" col={4}>
+          <FormField k="phone" htmlFor="f-phone" col={4} error={fieldErrors.phone}>
             <AppInput
               id="f-phone"
               latin
+              data-field="phone"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onBlur={() => onBlurField?.('phone')}
             />
           </FormField>
-          <FormField k="idCard" htmlFor="f-id" col={4}>
+          <FormField k="idCard" htmlFor="f-id" col={4} error={fieldErrors.idCard}>
             <AppInput
               id="f-id"
               latin
+              data-field="idCard"
               value={form.idCard || ''}
               onChange={(e) => setForm({ ...form, idCard: e.target.value })}
+              onBlur={() => onBlurField?.('idCard')}
             />
           </FormField>
-          <FormField k="dateOfBirth" htmlFor="f-dob" col={4}>
+          <FormField k="dateOfBirth" htmlFor="f-dob" col={4} error={fieldErrors.dateOfBirth}>
             <AppDateInput
               id="f-dob"
               lng={lng}
               value={form.dateOfBirth || ''}
               onChange={(v) => setForm({ ...form, dateOfBirth: v })}
+              onBlur={() => onBlurField?.('dateOfBirth')}
               emptyCalendarYear={1990}
             />
           </FormField>

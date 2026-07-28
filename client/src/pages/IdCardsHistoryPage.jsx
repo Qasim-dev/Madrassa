@@ -46,26 +46,46 @@ export default function IdCardsHistoryPage() {
         ) : items.length === 0 ? (
           <p className="p-3 text-secondary mb-0">{t('common.noRecords')}</p>
         ) : (
-          <table className="id-cards-table">
+          <table className="id-cards-table id-cards-table--history">
             <thead>
               <tr>
-                <th>{en ? 'Printed on' : 'پرنٹ تاریخ'}</th>
-                <th>{en ? 'By' : 'از طرف'}</th>
-                <th>{en ? 'Template' : 'ٹیمپلیٹ'}</th>
-                <th>{en ? 'Type' : 'قسم'}</th>
-                <th>{en ? 'Students' : 'طلباء'}</th>
-                <th>{en ? 'Copies' : 'کاپیاں'}</th>
+                <th className="id-cards-table__date" scope="col">
+                  {en ? 'Printed on' : 'پرنٹ تاریخ'}
+                </th>
+                <th className="id-cards-table__by" scope="col">
+                  {en ? 'By' : 'از طرف'}
+                </th>
+                <th className="id-cards-table__tpl" scope="col">
+                  {en ? 'Template' : 'ٹیمپلیٹ'}
+                </th>
+                <th className="id-cards-table__type" scope="col">
+                  {en ? 'Type' : 'قسم'}
+                </th>
+                <th className="id-cards-table__count" scope="col">
+                  {en ? 'Students' : 'طلباء'}
+                </th>
+                <th className="id-cards-table__copies" scope="col">
+                  {en ? 'Copies' : 'کاپیاں'}
+                </th>
               </tr>
             </thead>
             <tbody>
               {items.map((row) => (
                 <tr key={row._id}>
-                  <td>{formatDisplayDate(row.printedAt, lng, mode)}</td>
-                  <td>{row.printedBy?.username || row.printedBy?.name || '—'}</td>
-                  <td dir="ltr">{row.templateKey}</td>
-                  <td>{typeLabel[row.printType] || row.printType}</td>
-                  <td dir="ltr">{Array.isArray(row.studentIds) ? row.studentIds.length : 0}</td>
-                  <td dir="ltr">{row.copies || 1}</td>
+                  <td className="id-cards-table__date">{formatDisplayDate(row.printedAt, lng, mode)}</td>
+                  <td className="id-cards-table__by">{row.printedBy?.username || row.printedBy?.name || '—'}</td>
+                  <td className="id-cards-table__tpl">
+                    <span className="id-cards-table__ltr">{row.templateKey}</span>
+                  </td>
+                  <td className="id-cards-table__type">{typeLabel[row.printType] || row.printType}</td>
+                  <td className="id-cards-table__count">
+                    <span className="id-cards-table__ltr">
+                      {Array.isArray(row.studentIds) ? row.studentIds.length : 0}
+                    </span>
+                  </td>
+                  <td className="id-cards-table__copies">
+                    <span className="id-cards-table__ltr">{row.copies || 1}</span>
+                  </td>
                 </tr>
               ))}
             </tbody>

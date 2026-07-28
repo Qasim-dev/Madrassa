@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch } from 'react-redux'
 import { setActiveSessionId } from '../features/session/sessionSlice'
@@ -24,6 +24,10 @@ import {
   ModalForm,
 } from '../components/ui'
 import { useFlash } from '../app/flash.jsx'
+import { useFormValidation } from '../shared/validation'
+import { sessionFormSchema } from '../shared/validation/formSchemas'
+
+const FIELD_IDS = { title: 'ses-title', startDate: 'ses-start', endDate: 'ses-end' }
 
 // ─── Session delete confirmation modal ──────────────────────────────────────
 
@@ -187,10 +191,27 @@ export default function TartibatSessionsPage() {
   const [editing, setEditing] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null) // full session object
   const [form, setForm] = useState({ title: '', startDate: '', endDate: '', isActive: false })
+  const [saving, setSaving] = useState(false)
+
+  const schema = useMemo(() => sessionFormSchema, [])
+  const {
+    errors: fieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+    setErrors,
+  } = useFormValidation({
+    schema,
+    t,
+    fieldIds: FIELD_IDS,
+    order: ['title', 'startDate', 'endDate'],
+  })
 
   function openNew() {
     setEditing(null)
     setForm({ title: '', startDate: '', endDate: '', isActive: sessions.length === 0 })
+    setErrors({})
     setModal(true)
   }
 
@@ -202,26 +223,36 @@ export default function TartibatSessionsPage() {
       endDate: toInputDate(x.endDate),
       isActive: !!x.isActive,
     })
+    setErrors({})
     setModal(true)
   }
 
   async function save() {
+    const next = validateAll(form)
+    if (Object.keys(next).length) {
+      focusInvalid(next)
+      return
+    }
     const payload = {
       title: form.title.trim(),
       startDate: form.startDate || null,
       endDate: form.endDate || null,
       isActive: !!form.isActive,
     }
-    if (!payload.title) return
-    if (editing) {
-      const updated = await updateOne({ id: editing._id, ...payload }).unwrap()
-      if (updated.isActive) dispatch(setActiveSessionId(String(updated._id)))
-    } else {
-      const created = await createOne(payload).unwrap()
-      if (created.isActive) dispatch(setActiveSessionId(String(created._id)))
+    setSaving(true)
+    try {
+      if (editing) {
+        const updated = await updateOne({ id: editing._id, ...payload }).unwrap()
+        if (updated.isActive) dispatch(setActiveSessionId(String(updated._id)))
+      } else {
+        const created = await createOne(payload).unwrap()
+        if (created.isActive) dispatch(setActiveSessionId(String(created._id)))
+      }
+      setModal(false)
+      refetch()
+    } finally {
+      setSaving(false)
     }
-    setModal(false)
-    refetch()
   }
 
   const columns = [
@@ -281,33 +312,48 @@ export default function TartibatSessionsPage() {
         title={editing ? t('common.edit') : t('common.add')}
         onClose={() => setModal(false)}
         onSubmit={save}
+        saving={saving}
       >
-        <FormField k="sessionTitle" htmlFor="ses-title" required className="mb-2">
+        <FormField k="sessionTitle" htmlFor="ses-title" required className="mb-2" error={fieldErrors.title}>
           <AppInput
             id="ses-title"
             latin
             value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            onChange={(e) => {
+              const next = { ...form, title: e.target.value }
+              setForm(next)
+              revalidateIfError('title', next)
+            }}
+            onBlur={() => onBlurField('title', form)}
             placeholder={lng === 'ur' ? 'مثال: 2025–2026' : 'Example: 2025–2026'}
-            required
           />
         </FormField>
 
         <FormRow className="app-form-row--2">
-          <FormField k="sessionStart" htmlFor="ses-start" col={6}>
+          <FormField k="sessionStart" htmlFor="ses-start" col={6} error={fieldErrors.startDate}>
             <AppDateInput
               id="ses-start"
               lng={lng}
               value={form.startDate}
-              onChange={(v) => setForm({ ...form, startDate: v })}
+              onChange={(v) => {
+                const next = { ...form, startDate: v }
+                setForm(next)
+                revalidateIfError('endDate', next)
+              }}
+              onBlur={() => onBlurField('startDate', form)}
             />
           </FormField>
-          <FormField k="sessionEnd" htmlFor="ses-end" col={6}>
+          <FormField k="sessionEnd" htmlFor="ses-end" col={6} error={fieldErrors.endDate}>
             <AppDateInput
               id="ses-end"
               lng={lng}
               value={form.endDate}
-              onChange={(v) => setForm({ ...form, endDate: v })}
+              onChange={(v) => {
+                const next = { ...form, endDate: v }
+                setForm(next)
+                revalidateIfError('endDate', next)
+              }}
+              onBlur={() => onBlurField('endDate', form)}
             />
           </FormField>
         </FormRow>

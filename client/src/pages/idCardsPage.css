@@ -38,16 +38,19 @@
 
 .id-cards-table {
   width: 100%;
+  min-width: 52rem;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
 
 .id-cards-table th,
 .id-cards-table td {
-  padding: 0.65rem 0.75rem;
+  padding: 0.7rem 0.85rem;
   border-bottom: 1px solid var(--ds-border, #eae9e4);
   text-align: start;
   vertical-align: middle;
+  overflow-wrap: anywhere;
 }
 
 .id-cards-table thead th {
@@ -55,6 +58,7 @@
   color: var(--ds-text-muted, #6f7480);
   font-weight: 600;
   font-size: 0.8125rem;
+  white-space: nowrap;
 }
 
 .id-cards-table tbody tr:hover {
@@ -62,12 +66,90 @@
 }
 
 .id-cards-table__check {
-  width: 2.5rem;
+  width: 2.75rem;
+  text-align: center !important;
+}
+
+.id-cards-table__check input {
+  margin: 0;
+  vertical-align: middle;
+}
+
+.id-cards-table__id {
+  width: 9.5rem;
+}
+
+.id-cards-table__name {
+  width: 11rem;
+}
+
+.id-cards-table__subject {
+  width: 9rem;
+}
+
+.id-cards-table__class {
+  width: 9rem;
+}
+
+.id-cards-table__card {
+  width: 8.5rem;
+}
+
+.id-cards-table__actions {
+  width: 12.5rem;
+}
+
+.id-cards-table--history {
+  min-width: 44rem;
+}
+
+.id-cards-table--history .id-cards-table__date {
+  width: 9rem;
+}
+
+.id-cards-table--history .id-cards-table__by {
+  width: 9rem;
+}
+
+.id-cards-table--history .id-cards-table__tpl {
+  width: 9rem;
+}
+
+.id-cards-table--history .id-cards-table__type {
+  width: 7rem;
+}
+
+.id-cards-table--history .id-cards-table__count,
+.id-cards-table--history .id-cards-table__copies {
+  width: 5.5rem;
+}
+
+/* Keep Latin IDs/numbers under the same edge as the header (never flip the cell dir) */
+.id-cards-table__ltr {
+  display: inline-block;
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: start;
+  font-family: var(--font-latin, ui-sans-serif, system-ui, sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+
+.id-cards-table .id-cards-badge {
+  max-width: 100%;
+}
+
+.id-cards-table .id-cards-badge .id-cards-table__ltr {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 7.5rem;
 }
 
 .id-cards-row-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
   gap: 0.4rem;
 }
 
@@ -179,7 +261,7 @@
 
 .id-cards-print-layout {
   display: grid;
-  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
   gap: 1rem;
   margin-bottom: 1.25rem;
   align-items: start;
@@ -271,11 +353,28 @@
   margin-inline: auto;
 }
 
-/* Screen: hide the full printable sheet; show only on print */
-@media screen {
-  .id-cards-print-sheet {
-    display: none !important;
-  }
+.id-cards-print-preview-pane--all {
+  max-height: min(78vh, 56rem);
+  overflow: auto;
+}
+
+.id-cards-print-sheet--screen {
+  display: grid !important;
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  transform-origin: top center;
+}
+
+.id-cards-print-flip-box {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--ds-border, #eae9e4);
+}
+
+.id-cards-print-flip-box .idc-flip__stage {
+  width: 100%;
+  max-width: 85.6mm;
+  margin-inline: auto;
 }
 
 .id-cards-templates-grid {
@@ -367,16 +466,53 @@
 }
 
 @media print {
+  /* Unclip app chrome so multi-page print includes every card */
+  .app-shell,
+  .app-main-column,
+  .app-main-scroll,
+  .id-cards-print-page,
+  .id-cards-print-layout,
+  .id-cards-print-preview-pane--all,
+  .id-cards-print-sheet--screen {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
   .id-cards-print-settings,
   .id-cards-print-toolbar,
   .id-cards-print-hero,
-  .id-cards-print-layout,
+  .id-cards-print-panel,
+  .id-cards-print-preview-pane__head,
+  .id-cards-print-flip-box,
   .page-heading,
   .no-print {
     display: none !important;
   }
 
-  .id-cards-print-sheet {
+  .id-cards-print-layout {
     display: block !important;
+    margin: 0 !important;
+    gap: 0 !important;
+  }
+
+  .id-cards-print-preview-pane--all {
+    border: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  .id-cards-print-sheet--screen {
+    display: grid !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
   }
 }

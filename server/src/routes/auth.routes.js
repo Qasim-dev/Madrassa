@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
+import { rejectIfInvalid } from '../utils/apiValidation.js';
 import * as authService from '../services/auth.service.js';
 import { User } from '../models/User.js';
 import { Tenant } from '../models/Tenant.js';
@@ -11,14 +12,11 @@ const router = Router();
 
 router.post(
   '/login',
-  body('email').isEmail().normalizeEmail(),
-  body('password').notEmpty(),
+  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  body('password').notEmpty().withMessage('Password is required.'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       const result = await authService.login(req.body.email, req.body.password);
       res.json(result);
     } catch (e) {
@@ -29,16 +27,13 @@ router.post(
 
 router.post(
   '/register',
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 8 }),
+  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  body('password').isLength({ min: 8 }).withMessage('Password must contain at least 8 characters.'),
   body('nameUr').optional().isString(),
   body('nameEn').optional().isString(),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       const result = await authService.register({
         nameUr: req.body.nameUr,
         nameEn: req.body.nameEn,
@@ -54,13 +49,10 @@ router.post(
 
 router.post(
   '/refresh',
-  body('refreshToken').notEmpty(),
+  body('refreshToken').notEmpty().withMessage('Session refresh token is required.'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       const result = await authService.refreshSession(req.body.refreshToken);
       res.json(result);
     } catch (e) {
@@ -80,13 +72,10 @@ router.post('/logout', requireAuth, async (req, res, next) => {
 
 router.post(
   '/forgot-password',
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       const result = await authService.requestPasswordReset(req.body.email);
       res.json(result);
     } catch (e) {
@@ -97,14 +86,11 @@ router.post(
 
 router.post(
   '/reset-password',
-  body('token').notEmpty(),
-  body('newPassword').isLength({ min: 8 }),
+  body('token').notEmpty().withMessage('Reset token is required.'),
+  body('newPassword').isLength({ min: 8 }).withMessage('Password must contain at least 8 characters.'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       await authService.resetPasswordWithToken(req.body.token, req.body.newPassword);
       res.json({ ok: true });
     } catch (e) {
@@ -139,16 +125,13 @@ router.get('/me', requireAuth, async (req, res, next) => {
 router.patch(
   '/me',
   requireAuth,
-  body('email').optional().isEmail().normalizeEmail(),
+  body('email').optional().isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
   body('phone').optional().isString(),
   body('name').optional().isObject(),
   body('preferredLocale').optional().isIn(['ur', 'en']),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       const user = await User.findOne({ _id: req.user.userId, tenantId: req.tenantId });
       if (!user) return res.status(404).json({ message: 'Not found' });
       const { email, phone, name, preferredLocale } = req.body;
@@ -156,7 +139,10 @@ router.patch(
         const norm = String(email).trim().toLowerCase();
         const taken = await User.findOne({ email: norm, _id: { $ne: user._id } });
         if (taken) {
-          return res.status(409).json({ message: 'Email already in use' });
+          return res.status(409).json({
+            message: 'An account with this email already exists.',
+            fields: { email: 'An account with this email already exists.' },
+          });
         }
         user.email = norm;
         user.username = norm;
@@ -189,20 +175,20 @@ router.patch(
   '/tenant',
   requireAuth,
   requirePermission('settings:write'),
-  body('name').isObject(),
+  body('name').isObject().withMessage('Institution name is required.'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       const tenant = await Tenant.findOne({ _id: req.tenantId });
       if (!tenant) return res.status(404).json({ message: 'Organization not found' });
       const { name } = req.body;
       if (name?.ur !== undefined) tenant.name.ur = String(name.ur).trim();
       if (name?.en !== undefined) tenant.name.en = String(name.en).trim();
       if (!tenant.name.ur && !tenant.name.en) {
-        return res.status(400).json({ message: 'Institution name is required in at least one language' });
+        return res.status(400).json({
+          message: 'Institution name is required in at least one language.',
+          fields: { name: 'Institution name is required in at least one language.' },
+        });
       }
       if (!tenant.name.ur) tenant.name.ur = tenant.name.en;
       if (!tenant.name.en) tenant.name.en = tenant.name.ur;
@@ -219,14 +205,11 @@ router.patch(
 router.post(
   '/change-password',
   requireAuth,
-  body('currentPassword').notEmpty(),
-  body('newPassword').isLength({ min: 8 }),
+  body('currentPassword').notEmpty().withMessage('Current password is required.'),
+  body('newPassword').isLength({ min: 8 }).withMessage('Password must contain at least 8 characters.'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       await authService.changePassword(
         req.user.userId,
         req.tenantId,

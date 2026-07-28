@@ -28,7 +28,6 @@ const menuGroups = [
       { to: '/tartibat/sessions', navKey: 'navTartibatSessions', icon: 'tartibat', permission: 'tartibat:write' },
       { to: '/tartibat/subjects', navKey: 'navTartibatSubjects', icon: 'tartibat', permission: 'tartibat:write' },
       { to: '/tartibat/darajat', navKey: 'navTartibatDarajat', icon: 'tartibat', permission: 'tartibat:write' },
-      { to: '/grades', navKey: 'navGrades', icon: 'grades', permission: 'grades:write' },
       { to: '/tartibat/books', navKey: 'navTartibatBooks', icon: 'tartibat', permission: 'tartibat:write' },
       { to: '/book-reading', navKey: 'navBookReading', icon: 'tartibat', permission: 'bookreading:write' },
       { to: '/speeches', navKey: 'navSpeeches', icon: 'speeches', permission: 'speeches:write' },
@@ -89,7 +88,6 @@ const menuGroups = [
     items: [
       { to: '/users', navKey: 'navUsers', icon: 'profile', permission: 'users:manage' },
       { to: '/recycle-bin', navKey: 'navRecycleBin', icon: 'recycle', permission: 'recycle:read' },
-      { to: '/settings', navKey: 'navSettings', icon: 'settings', permission: 'settings:write' },
       { to: '/profile', navKey: 'navProfile', icon: 'profile' },
     ],
   },

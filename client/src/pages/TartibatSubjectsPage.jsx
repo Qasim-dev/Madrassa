@@ -9,14 +9,17 @@ import {
 } from '../services/api'
 import { loc } from '../shared/localized'
 import DataTable from '../components/DataTable'
-import { AppInput, AppSelect, AppCheckbox } from '../components/ui'
+import { AppInput, AppSelect, AppCheckbox, FormField } from '../components/ui'
 import PageHeading from '../components/PageHeading'
 import AppModalShell from '../components/AppModalShell'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
-import BilingualLabel from '../components/BilingualLabel'
 import FilterDrawer, { FilterToolbar } from '../components/FilterDrawer'
+import { useFormValidation } from '../shared/validation'
+import { subjectFormSchema } from '../shared/validation/formSchemas'
 
 const emptyLoc = () => ({ ur: '', en: '' })
+
+const FIELD_IDS = { sessionId: 'subj-ses', 'name.ur': 'subj-u' }
 
 export default function TartibatSubjectsPage() {
   const { t, i18n } = useTranslation()
@@ -45,6 +48,21 @@ export default function TartibatSubjectsPage() {
   const [editing, setEditing] = useState(null)
   const [deleteSubjectTarget, setDeleteSubjectTarget] = useState(null)
   const [form, setForm] = useState({ sessionId: '', name: emptyLoc(), systemType: emptyLoc(), isActive: true })
+  const [saving, setSaving] = useState(false)
+
+  const {
+    errors: fieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+    setErrors,
+  } = useFormValidation({
+    schema: subjectFormSchema,
+    t,
+    fieldIds: FIELD_IDS,
+    order: ['sessionId', 'name.ur'],
+  })
 
   const filteredSubjects = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -69,6 +87,7 @@ export default function TartibatSubjectsPage() {
   function openNew() {
     setEditing(null)
     setForm({ sessionId: sessionFilter || '', name: emptyLoc(), systemType: emptyLoc(), isActive: true })
+    setErrors({})
     setModal(true)
   }
 
@@ -80,17 +99,26 @@ export default function TartibatSubjectsPage() {
       systemType: x.systemType || emptyLoc(),
       isActive: x.isActive !== false,
     })
+    setErrors({})
     setModal(true)
   }
 
   async function save(e) {
     e.preventDefault()
-    if (!form.sessionId) return
-    if (!form.name.ur.trim() && !form.name.en.trim()) return
-    if (editing) await updateOne({ id: editing._id, ...form }).unwrap()
-    else await createOne(form).unwrap()
-    setModal(false)
-    refetch()
+    const next = validateAll(form)
+    if (Object.keys(next).length) {
+      focusInvalid(next)
+      return
+    }
+    setSaving(true)
+    try {
+      if (editing) await updateOne({ id: editing._id, ...form }).unwrap()
+      else await createOne(form).unwrap()
+      setModal(false)
+      refetch()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const columns = [
@@ -181,14 +209,16 @@ export default function TartibatSubjectsPage() {
         <AppModalShell title={editing ? t('common.edit') : t('common.add')} onClose={() => setModal(false)}>
           <form className="modal-app-form" onSubmit={save}>
             <div className="modal-app-body">
-              <div className="mb-2">
-                <BilingualLabel k="sessionTitle" htmlFor="subj-ses" required />
+              <FormField k="sessionTitle" htmlFor="subj-ses" required className="mb-2" error={fieldErrors.sessionId}>
                 <AppSelect
                   id="subj-ses"
-                 
                   value={form.sessionId}
-                  onChange={(e) => setForm({ ...form, sessionId: e.target.value })}
-                  required
+                  onChange={(e) => {
+                    const next = { ...form, sessionId: e.target.value }
+                    setForm(next)
+                    revalidateIfError('sessionId', next)
+                  }}
+                  onBlur={() => onBlurField('sessionId', form)}
                 >
                   <option value="">—</option>
                   {sessions.map((s) => (
@@ -197,51 +227,59 @@ export default function TartibatSubjectsPage() {
                     </option>
                   ))}
                 </AppSelect>
-              </div>
-              <div className="mb-2" data-lang-field="ur">
-                <BilingualLabel k="subjectNameUr" htmlFor="subj-u" data-lang-field="ur" />
+              </FormField>
+              <FormField
+                k="subjectNameUr"
+                htmlFor="subj-u"
+                className="mb-2"
+                langField="ur"
+                error={fieldErrors['name.ur']}
+              >
                 <AppInput
                   id="subj-u"
-                 
                   data-lang-field="ur"
                   value={form.name.ur}
-                  onChange={(e) => setForm({ ...form, name: { ...form.name, ur: e.target.value } })}
+                  onChange={(e) => {
+                    const next = { ...form, name: { ...form.name, ur: e.target.value } }
+                    setForm(next)
+                    revalidateIfError('name.ur', next)
+                  }}
+                  onBlur={() => onBlurField('name.ur', form)}
                   dir="rtl"
                 />
-              </div>
-              <div className="mb-2" data-lang-field="en">
-                <BilingualLabel k="subjectNameEn" htmlFor="subj-e" data-lang-field="en" />
+              </FormField>
+              <FormField k="subjectNameEn" htmlFor="subj-e" className="mb-2" langField="en">
                 <AppInput
                   id="subj-e"
-                 
                   data-lang-field="en"
                   value={form.name.en}
                   latin
-                    onChange={(e) => setForm({ ...form, name: { ...form.name, en: e.target.value } })}
+                  onChange={(e) => {
+                    const next = { ...form, name: { ...form.name, en: e.target.value } }
+                    setForm(next)
+                    revalidateIfError('name.ur', next)
+                  }}
+                  onBlur={() => onBlurField('name.ur', form)}
                 />
-              </div>
-              <div className="mb-2" data-lang-field="ur">
-                <BilingualLabel k="subjectSystemTypeUr" htmlFor="subj-sys-u" data-lang-field="ur" />
+              </FormField>
+              <FormField k="subjectSystemTypeUr" htmlFor="subj-sys-u" className="mb-2" langField="ur">
                 <AppInput
                   id="subj-sys-u"
-                 
                   data-lang-field="ur"
                   value={form.systemType.ur}
                   onChange={(e) => setForm({ ...form, systemType: { ...form.systemType, ur: e.target.value } })}
                   dir="rtl"
                 />
-              </div>
-              <div className="mb-2" data-lang-field="en">
-                <BilingualLabel k="subjectSystemTypeEn" htmlFor="subj-sys-e" data-lang-field="en" />
+              </FormField>
+              <FormField k="subjectSystemTypeEn" htmlFor="subj-sys-e" className="mb-2" langField="en">
                 <AppInput
                   id="subj-sys-e"
-                 
                   data-lang-field="en"
                   value={form.systemType.en}
                   latin
-                    onChange={(e) => setForm({ ...form, systemType: { ...form.systemType, en: e.target.value } })}
+                  onChange={(e) => setForm({ ...form, systemType: { ...form.systemType, en: e.target.value } })}
                 />
-              </div>
+              </FormField>
               <AppCheckbox
                 id="subj-act"
                 checked={!!form.isActive}
@@ -251,11 +289,11 @@ export default function TartibatSubjectsPage() {
               />
             </div>
             <div className="modal-app-footer">
-              <button type="button" className="btn btn-secondary" onClick={() => setModal(false)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModal(false)} disabled={saving}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" className="btn btn-success">
-                {t('common.save')}
+              <button type="submit" className="btn btn-success" disabled={saving}>
+                {saving ? t('validation.formSaving') : t('common.save')}
               </button>
             </div>
           </form>

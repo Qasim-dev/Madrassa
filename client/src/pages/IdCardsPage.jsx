@@ -37,6 +37,11 @@ function classLabel(student, lng) {
   return '—'
 }
 
+function sectionLabel(student, lng) {
+  if (student?.subjectId?.name) return loc(student.subjectId.name, lng)
+  return '—'
+}
+
 export default function IdCardsPage() {
   const { t, i18n } = useTranslation()
   const lng = i18n.language
@@ -261,23 +266,6 @@ export default function IdCardsPage() {
         onReset={() => setDraft({ darjahId: '', subjectId: '', gender: '', templateKey: 'pvc-prestige' })}
       >
         <div className="filter-drawer__field">
-          <label className="filter-drawer__label" htmlFor="idc-darjah">
-            {en ? 'Class / Darjah' : 'درجہ'}
-          </label>
-          <AppSelect
-            id="idc-darjah"
-            value={draft.darjahId}
-            onChange={(e) => setDraft((p) => ({ ...p, darjahId: e.target.value }))}
-          >
-            <option value="">{en ? 'All' : 'تمام'}</option>
-            {darajat.map((d) => (
-              <option key={d._id} value={d._id}>
-                {loc(d.name, lng)}
-              </option>
-            ))}
-          </AppSelect>
-        </div>
-        <div className="filter-drawer__field">
           <label className="filter-drawer__label" htmlFor="idc-subject">
             {en ? 'Section / Subject' : 'شعبہ'}
           </label>
@@ -290,6 +278,23 @@ export default function IdCardsPage() {
             {subjects.map((s) => (
               <option key={s._id} value={s._id}>
                 {loc(s.name, lng)}
+              </option>
+            ))}
+          </AppSelect>
+        </div>
+        <div className="filter-drawer__field">
+          <label className="filter-drawer__label" htmlFor="idc-darjah">
+            {en ? 'Class / Darjah' : 'درجہ'}
+          </label>
+          <AppSelect
+            id="idc-darjah"
+            value={draft.darjahId}
+            onChange={(e) => setDraft((p) => ({ ...p, darjahId: e.target.value }))}
+          >
+            <option value="">{en ? 'All' : 'تمام'}</option>
+            {darajat.map((d) => (
+              <option key={d._id} value={d._id}>
+                {loc(d.name, lng)}
               </option>
             ))}
           </AppSelect>
@@ -357,14 +362,27 @@ export default function IdCardsPage() {
           <table className="id-cards-table">
             <thead>
               <tr>
-                <th className="id-cards-table__check">
+                <th className="id-cards-table__check" scope="col">
                   <input type="checkbox" checked={allPageSelected} onChange={togglePage} aria-label="Select page" />
                 </th>
-                <th>{en ? 'Student ID' : 'رجسٹر نمبر'}</th>
-                <th>{en ? 'Name' : 'نام'}</th>
-                <th>{en ? 'Class' : 'درجہ'}</th>
-                <th>{en ? 'Card' : 'کارڈ'}</th>
-                <th>{en ? 'Actions' : 'اعمال'}</th>
+                <th className="id-cards-table__id" scope="col">
+                  {en ? 'Student ID' : 'رجسٹر نمبر'}
+                </th>
+                <th className="id-cards-table__name" scope="col">
+                  {en ? 'Name' : 'نام'}
+                </th>
+                <th className="id-cards-table__subject" scope="col">
+                  {en ? 'Section' : 'شعبہ'}
+                </th>
+                <th className="id-cards-table__class" scope="col">
+                  {en ? 'Class' : 'درجہ'}
+                </th>
+                <th className="id-cards-table__card" scope="col">
+                  {en ? 'Card' : 'کارڈ'}
+                </th>
+                <th className="id-cards-table__actions" scope="col">
+                  {en ? 'Actions' : 'اعمال'}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -372,7 +390,7 @@ export default function IdCardsPage() {
                 const id = String(student._id)
                 return (
                   <tr key={id}>
-                    <td>
+                    <td className="id-cards-table__check">
                       <input
                         type="checkbox"
                         checked={selected.has(id)}
@@ -380,17 +398,22 @@ export default function IdCardsPage() {
                         aria-label={loc(student.name, lng)}
                       />
                     </td>
-                    <td dir="ltr">{student.studentId || '—'}</td>
-                    <td>{loc(student.name, lng) || '—'}</td>
-                    <td>{classLabel(student, lng)}</td>
-                    <td>
+                    <td className="id-cards-table__id">
+                      <span className="id-cards-table__ltr">{student.studentId || '—'}</span>
+                    </td>
+                    <td className="id-cards-table__name">{loc(student.name, lng) || '—'}</td>
+                    <td className="id-cards-table__subject">{sectionLabel(student, lng)}</td>
+                    <td className="id-cards-table__class">{classLabel(student, lng)}</td>
+                    <td className="id-cards-table__card">
                       {card ? (
-                        <span className="id-cards-badge id-cards-badge--ok">{card.cardNumber}</span>
+                        <span className="id-cards-badge id-cards-badge--ok">
+                          <span className="id-cards-table__ltr">{card.cardNumber}</span>
+                        </span>
                       ) : (
                         <span className="id-cards-badge id-cards-badge--muted">{en ? 'Not generated' : 'تیار نہیں'}</span>
                       )}
                     </td>
-                    <td>
+                    <td className="id-cards-table__actions">
                       <div className="id-cards-row-actions">
                         <button
                           type="button"

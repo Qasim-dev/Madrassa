@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Outlet, createBrowserRouter, createRoutesFromElements, Route } from 'react-router-dom'
+import { Navigate, Outlet, createBrowserRouter, createRoutesFromElements, Route } from 'react-router-dom'
 import RequireAuth from './components/RequireAuth'
 import RequirePermission from './components/RequirePermission'
 import MainLayout from './layouts/MainLayout'
@@ -16,7 +16,6 @@ const StudentPrintPage = lazy(() => import('./pages/StudentPrintPage'))
 const StudentsBulkPrintPage = lazy(() => import('./pages/StudentsBulkPrintPage'))
 const TeachersPage = lazy(() => import('./pages/TeachersPage'))
 const TeacherFormPage = lazy(() => import('./pages/TeacherFormPage'))
-const GradesPage = lazy(() => import('./pages/GradesPage'))
 const AttendancePage = lazy(() => import('./pages/AttendancePage'))
 const FeesPage = lazy(() => import('./pages/FeesPage'))
 const FinancePage = lazy(() => import('./pages/FinancePage'))
@@ -24,7 +23,6 @@ const InventoryPage = lazy(() => import('./pages/InventoryPage'))
 const LibraryPage = lazy(() => import('./pages/LibraryPage'))
 const SpeechesPage = lazy(() => import('./pages/SpeechesPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const UsersPage = lazy(() => import('./pages/UsersPage'))
 const IdCardsPage = lazy(() => import('./pages/IdCardsPage'))
 const IdCardsPrintPage = lazy(() => import('./pages/IdCardsPrintPage'))
@@ -114,14 +112,7 @@ export const router = createBrowserRouter(
             </Guard>
           }
         />
-        <Route
-          path="grades"
-          element={
-            <Guard permission="grades:write">
-              <GradesPage />
-            </Guard>
-          }
-        />
+        <Route path="grades" element={<Navigate to="/tartibat/darajat" replace />} />
         <Route path="attendance" element={<AttendancePage />} />
         <Route path="student-character" element={<StudentCharacterPage />} />
         <Route path="exams" element={<ExamsPage />} />
@@ -145,14 +136,7 @@ export const router = createBrowserRouter(
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="library" element={<LibraryPage />} />
         <Route path="speeches" element={<SpeechesPage />} />
-        <Route
-          path="settings"
-          element={
-            <Guard permission="settings:write">
-              <SettingsPage />
-            </Guard>
-          }
-        />
+        <Route path="settings" element={<Navigate to="/profile" replace />} />
         <Route
           path="users"
           element={

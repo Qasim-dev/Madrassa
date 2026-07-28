@@ -26,6 +26,8 @@ import PageHeading from '../components/PageHeading'
 import AppKpiCards from '../components/ui/AppKpiCards'
 import { AppInput, AppSelect, AppCreatableSelect, FormField, FormRow, AppTextarea } from '../components/ui'
 import FilterDrawer, { FilterToolbar } from '../components/FilterDrawer'
+import { useFormValidation, required } from '../shared/validation'
+import { libraryBookSchema } from '../shared/validation/formSchemas'
 
 const emptyLoc = () => ({ ur: '', en: '' })
 
@@ -64,6 +66,26 @@ function emptyIssueForm() {
   }
 }
 
+const ISSUE_FIELD_IDS = {
+  bookId: 'iss-book',
+  studentId: 'iss-stu',
+  teacherId: 'iss-tea',
+  'borrowerName.ur': 'iss-name-ur',
+}
+
+const issueSchema = {
+  bookId: required('validation.selectRequired'),
+  studentId: (value, values, t) =>
+    values.borrowerType === 'student' && !value ? t('validation.selectRequired') : '',
+  teacherId: (value, values, t) =>
+    values.borrowerType === 'teacher' && !value ? t('validation.selectRequired') : '',
+  'borrowerName.ur': (_value, values, t) => {
+    if (values.borrowerType === 'student' || values.borrowerType === 'teacher') return ''
+    const ur = String(values?.borrowerName?.ur || '').trim()
+    return ur ? '' : t('validation.nameRequired')
+  },
+}
+
 export default function LibraryPage() {
   const { t, i18n } = useTranslation()
   const lng = i18n.language
@@ -80,6 +102,32 @@ export default function LibraryPage() {
   const [bookForm, setBookForm] = useState(emptyBookForm)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [issueForm, setIssueForm] = useState(emptyIssueForm)
+
+  const {
+    errors: bookErrors,
+    setErrors: setBookErrors,
+    onBlurField: onBlurBook,
+    revalidateIfError: revalidateBook,
+    validateAll: validateBookAll,
+    focusInvalid: focusInvalidBook,
+  } = useFormValidation({
+    schema: libraryBookSchema,
+    t,
+    fieldIds: { 'title.ur': 'bk-title-ur' },
+  })
+
+  const {
+    errors: issueErrors,
+    setErrors: setIssueErrors,
+    revalidateIfError: revalidateIssue,
+    validateAll: validateIssueAll,
+    focusInvalid: focusInvalidIssue,
+  } = useFormValidation({
+    schema: issueSchema,
+    t,
+    fieldIds: ISSUE_FIELD_IDS,
+    order: ['bookId', 'studentId', 'teacherId', 'borrowerName.ur'],
+  })
 
   useEffect(() => {
     if (!filterOpen) return
@@ -141,6 +189,7 @@ export default function LibraryPage() {
   function openNewBook() {
     setEditing(null)
     setBookForm(emptyBookForm())
+    setBookErrors({})
     setBookModal(true)
   }
 
@@ -164,11 +213,17 @@ export default function LibraryPage() {
       notes: b.notes || '',
       isActive: b.isActive !== false,
     })
+    setBookErrors({})
     setBookModal(true)
   }
 
   async function saveBook(e) {
     e.preventDefault()
+    const nextErrors = validateBookAll(bookForm)
+    if (Object.keys(nextErrors).length) {
+      focusInvalidBook(nextErrors)
+      return
+    }
     const payload = {
       ...bookForm,
       serialNumber: bookForm.serialNumber ? Number(bookForm.serialNumber) : undefined,
@@ -182,11 +237,17 @@ export default function LibraryPage() {
     if (editing) await updateBook({ id: editing._id, ...payload }).unwrap()
     else await createBook(payload).unwrap()
     setBookModal(false)
+    setBookErrors({})
     refetch()
   }
 
   async function submitIssue(e) {
     e.preventDefault()
+    const nextErrors = validateIssueAll(issueForm)
+    if (Object.keys(nextErrors).length) {
+      focusInvalidIssue(nextErrors)
+      return
+    }
     await issueBook({
       ...issueForm,
       copies: Number(issueForm.copies) || 1,
@@ -194,6 +255,7 @@ export default function LibraryPage() {
       teacherId: issueForm.borrowerType === 'teacher' ? issueForm.teacherId || null : null,
     }).unwrap()
     setIssueForm(emptyIssueForm())
+    setIssueErrors({})
     refetch()
     refetchTx()
   }
@@ -448,12 +510,15 @@ export default function LibraryPage() {
             </h2>
             <form onSubmit={submitIssue}>
               <FormRow>
-                <FormField k="libraryBookTitle" htmlFor="iss-book" required col={4}>
+                <FormField k="libraryBookTitle" htmlFor="iss-book" required col={4} error={issueErrors.bookId}>
                   <AppSelect
                     id="iss-book"
-                    required
                     value={issueForm.bookId}
-                    onChange={(e) => setIssueForm({ ...issueForm, bookId: e.target.value })}
+                    onChange={(e) => {
+                      const next = { ...issueForm, bookId: e.target.value }
+                      setIssueForm(next)
+                      revalidateIssue('bookId', next)
+                    }}
                   >
                     <option value="">—</option>
                     {books
@@ -469,14 +534,16 @@ export default function LibraryPage() {
                   <AppSelect
                     id="iss-type"
                     value={issueForm.borrowerType}
-                    onChange={(e) =>
-                      setIssueForm({
+                    onChange={(e) => {
+                      const next = {
                         ...issueForm,
                         borrowerType: e.target.value,
                         studentId: '',
                         teacherId: '',
-                      })
-                    }
+                      }
+                      setIssueForm(next)
+                      setIssueErrors({})
+                    }}
                   >
                     {LIBRARY_BORROWER_TYPES.map((b) => (
                       <option key={b.id} value={b.id}>
@@ -486,11 +553,15 @@ export default function LibraryPage() {
                   </AppSelect>
                 </FormField>
                 {issueForm.borrowerType === 'student' ? (
-                  <FormField k="feeStudentCol" htmlFor="iss-stu" col={4}>
+                  <FormField k="feeStudentCol" htmlFor="iss-stu" col={4} error={issueErrors.studentId}>
                     <AppSelect
                       id="iss-stu"
                       value={issueForm.studentId}
-                      onChange={(e) => setIssueForm({ ...issueForm, studentId: e.target.value })}
+                      onChange={(e) => {
+                        const next = { ...issueForm, studentId: e.target.value }
+                        setIssueForm(next)
+                        revalidateIssue('studentId', next)
+                      }}
                     >
                       <option value="">—</option>
                       {students.map((s) => (
@@ -502,11 +573,15 @@ export default function LibraryPage() {
                   </FormField>
                 ) : null}
                 {issueForm.borrowerType === 'teacher' ? (
-                  <FormField k="teacher" htmlFor="iss-tea" col={4}>
+                  <FormField k="teacher" htmlFor="iss-tea" col={4} error={issueErrors.teacherId}>
                     <AppSelect
                       id="iss-tea"
                       value={issueForm.teacherId}
-                      onChange={(e) => setIssueForm({ ...issueForm, teacherId: e.target.value })}
+                      onChange={(e) => {
+                        const next = { ...issueForm, teacherId: e.target.value }
+                        setIssueForm(next)
+                        revalidateIssue('teacherId', next)
+                      }}
                     >
                       <option value="">—</option>
                       {teachers.map((te) => (
@@ -518,16 +593,18 @@ export default function LibraryPage() {
                   </FormField>
                 ) : null}
                 {issueForm.borrowerType === 'guest' || issueForm.borrowerType === 'staff' ? (
-                  <FormField k="fullName" htmlFor="iss-name-ur" col={4}>
+                  <FormField k="fullName" htmlFor="iss-name-ur" col={4} error={issueErrors['borrowerName.ur']}>
                     <AppInput
                       id="iss-name-ur"
                       value={issueForm.borrowerName.ur}
-                      onChange={(e) =>
-                        setIssueForm({
+                      onChange={(e) => {
+                        const next = {
                           ...issueForm,
                           borrowerName: { ...issueForm.borrowerName, ur: e.target.value },
-                        })
-                      }
+                        }
+                        setIssueForm(next)
+                        revalidateIssue('borrowerName.ur', next)
+                      }}
                     />
                   </FormField>
                 ) : null}
@@ -662,14 +739,18 @@ export default function LibraryPage() {
                   </FormField>
                 </div>
                 <div className="col-12 col-md-4" data-lang-field="ur">
-                  <FormField k="bookTitleUr" htmlFor="bk-title-ur" required langField="ur">
+                  <FormField k="bookTitleUr" htmlFor="bk-title-ur" required langField="ur" error={bookErrors['title.ur']}>
                     <AppInput
                       id="bk-title-ur"
                       data-lang-field="ur"
                       dir="rtl"
                       value={bookForm.title.ur}
-                      onChange={(e) => setBookForm({ ...bookForm, title: { ...bookForm.title, ur: e.target.value } })}
-                      required
+                      onChange={(e) => {
+                        const next = { ...bookForm, title: { ...bookForm.title, ur: e.target.value } }
+                        setBookForm(next)
+                        revalidateBook('title.ur', next)
+                      }}
+                      onBlur={() => onBlurBook('title.ur', bookForm)}
                     />
                   </FormField>
                 </div>
@@ -680,7 +761,12 @@ export default function LibraryPage() {
                       latin
                       data-lang-field="en"
                       value={bookForm.title.en}
-                      onChange={(e) => setBookForm({ ...bookForm, title: { ...bookForm.title, en: e.target.value } })}
+                      onChange={(e) => {
+                        const next = { ...bookForm, title: { ...bookForm.title, en: e.target.value } }
+                        setBookForm(next)
+                        revalidateBook('title.ur', next)
+                      }}
+                      onBlur={() => onBlurBook('title.ur', bookForm)}
                     />
                   </FormField>
                 </div>

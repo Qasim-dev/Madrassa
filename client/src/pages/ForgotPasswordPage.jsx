@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useForgotPasswordMutation } from '../services/api'
-import { AppInput } from '../components/ui'
+import { AppInput, FormField } from '../components/ui'
+import { useFormValidation, forgotPasswordSchema } from '../shared/validation'
 
 export default function ForgotPasswordPage() {
   const { t, i18n } = useTranslation()
@@ -11,13 +12,33 @@ export default function ForgotPasswordPage() {
   const [done, setDone] = useState(null)
   const [forgot, { isLoading, error }] = useForgotPasswordMutation()
 
+  const {
+    errors: fieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+    applyApiError,
+  } = useFormValidation({
+    schema: forgotPasswordSchema,
+    t,
+    fieldIds: { email: 'forgot-email' },
+    order: ['email'],
+  })
+
   async function onSubmit(e) {
     e.preventDefault()
+    const values = { email: email.trim() }
+    const nextErrors = validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      focusInvalid(nextErrors)
+      return
+    }
     try {
-      const data = await forgot({ email: email.trim() }).unwrap()
+      const data = await forgot(values).unwrap()
       setDone(data)
-    } catch {
-      /* shown via error */
+    } catch (err) {
+      applyApiError(err)
     }
   }
 
@@ -46,19 +67,26 @@ export default function ForgotPasswordPage() {
             ) : null}
           </div>
         ) : (
-          <form onSubmit={onSubmit}>
-            <label className="form-label" htmlFor="forgot-email">
-              {t('auth.signin.email')}
-            </label>
-            <AppInput
-              id="forgot-email"
-              type="email"
-              latin
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+          <form onSubmit={onSubmit} noValidate>
+            <FormField
+              label={t('auth.signin.email')}
+              htmlFor="forgot-email"
               required
-              autoComplete="email"
-            />
+              error={fieldErrors.email}
+            >
+              <AppInput
+                id="forgot-email"
+                type="email"
+                latin
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  revalidateIfError('email', { email: e.target.value })
+                }}
+                onBlur={() => onBlurField('email', { email })}
+                autoComplete="email"
+              />
+            </FormField>
             {error ? (
               <div className="alert alert-danger py-2 small mt-2" role="alert">
                 {error.data?.message || t('auth.forgotFailed', { defaultValue: 'Request failed' })}

@@ -19,6 +19,7 @@ import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { withNotDeleted, NOT_DELETED } from '../utils/softDelete.js';
 import { softDeleteRecord } from '../services/recycleBin.service.js';
+import { sendValidationError } from '../utils/apiValidation.js';
 
 const router = Router();
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -308,6 +309,25 @@ router.post('/', async (req, res, next) => {
       'subjectId',
       'teacherId',
     ]);
+    const nameUr = String(body.name?.ur || '').trim();
+    const nameEn = String(body.name?.en || '').trim();
+    if (!nameUr && !nameEn) {
+      return sendValidationError(res, { 'name.ur': 'Student name is required.' }, 'Student name is required.');
+    }
+    if (body.dateOfBirth) {
+      const dob = new Date(body.dateOfBirth);
+      if (!Number.isNaN(dob.getTime())) {
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        if (dob > today) {
+          return sendValidationError(
+            res,
+            { dateOfBirth: 'Date of birth cannot be in the future.' },
+            'Date of birth cannot be in the future.'
+          );
+        }
+      }
+    }
     await assignAllBooksForClass(req.tenantId, body);
     if (!body.studentId || !String(body.studentId).trim()) {
       body.studentId = await allocateNextStudentId({ tenantId: req.tenantId, sessionId: body.sessionId });

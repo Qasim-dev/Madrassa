@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
 import { User } from '../models/User.js';
 import * as authService from '../services/auth.service.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { rejectIfInvalid } from '../utils/apiValidation.js';
 
 const router = Router();
 
@@ -21,15 +22,12 @@ router.get('/', async (req, res, next) => {
 
 router.post(
   '/',
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 8 }),
-  body('role').optional().isIn(['admin', 'staff']),
+  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  body('password').isLength({ min: 8 }).withMessage('Password must contain at least 8 characters.'),
+  body('role').optional().isIn(['admin', 'staff']).withMessage('Please select a valid role.'),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       const created = await authService.createTenantUser({
         tenantId: req.tenantId,
         email: req.body.email,
@@ -47,16 +45,13 @@ router.post(
 
 router.patch(
   '/:id',
-  body('role').optional().isIn(['admin', 'staff']),
+  body('role').optional().isIn(['admin', 'staff']).withMessage('Please select a valid role.'),
   body('phone').optional().isString(),
   async (req, res, next) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-      }
+      if (rejectIfInvalid(req, res, 'Please fix the highlighted fields.')) return;
       if (String(req.params.id) === String(req.user.userId) && req.body.role && req.body.role !== 'admin') {
-        return res.status(400).json({ message: 'Cannot demote your own account' });
+        return res.status(400).json({ message: 'You cannot demote your own account.' });
       }
       const user = await User.findOne({ _id: req.params.id, tenantId: req.tenantId });
       if (!user) return res.status(404).json({ message: 'Not found' });
@@ -83,7 +78,7 @@ router.patch(
 router.delete('/:id', async (req, res, next) => {
   try {
     if (String(req.params.id) === String(req.user.userId)) {
-      return res.status(400).json({ message: 'Cannot delete your own account' });
+      return res.status(400).json({ message: 'You cannot delete your own account.' });
     }
     const doc = await User.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     if (!doc) return res.status(404).json({ message: 'Not found' });

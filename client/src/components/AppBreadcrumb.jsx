@@ -24,7 +24,6 @@ const ROUTES = [
   { path: '/exams', labelKey: 'nav.exams' },
   { path: '/students', labelKey: 'nav.students' },
   { path: '/teachers', labelKey: 'nav.teachers' },
-  { path: '/grades', labelKey: 'nav.grades' },
   { path: '/attendance', labelKey: 'nav.attendance' },
   { path: '/student-character', labelKey: 'nav.studentCharacter' },
   { path: '/fees', labelKey: 'nav.fees' },
@@ -34,7 +33,7 @@ const ROUTES = [
   { path: '/speeches', labelKey: 'nav.speeches' },
   { path: '/profile', labelKey: 'nav.profile' },
   { path: '/users', labelKey: 'nav.users' },
-  { path: '/settings', labelKey: 'nav.settings' },
+  { path: '/recycle-bin', labelKey: 'nav.recycleBin' },
 ]
 
 function resolveLeaf(pathname) {

@@ -1,8 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import AppDateInput from '../AppDateInput'
-import { AppInput, AppTextarea } from '../ui'
+import { AppInput, AppTextarea, FormField } from '../ui'
 
-export default function ReadingRecordForm({ form, setForm, totalPages }) {
+export default function ReadingRecordForm({
+  form,
+  setForm,
+  totalPages,
+  errors = {},
+  onFieldBlur,
+  onFieldChange,
+}) {
   const { t } = useTranslation()
 
   const start = form.startPage !== '' ? Number(form.startPage) : null
@@ -16,31 +23,56 @@ export default function ReadingRecordForm({ form, setForm, totalPages }) {
     <div className="reading-record-form">
       <div className="reading-record-form__grid reading-record-form__grid--pages">
         <div className="reading-record-form__field reading-record-form__field--date">
-          <label className="reading-record-form__label">{t('bookReading.col.date')}</label>
-          <AppDateInput value={form.readingDate} onChange={(v) => setForm((f) => ({ ...f, readingDate: v }))} />
+          <FormField label={t('bookReading.col.date')} htmlFor="rr-date" required error={errors.readingDate}>
+            <AppDateInput
+              id="rr-date"
+              value={form.readingDate}
+              onChange={(v) => {
+                const next = { ...form, readingDate: v }
+                setForm(next)
+                onFieldChange?.('readingDate', next)
+              }}
+              onBlur={() => onFieldBlur?.('readingDate', form)}
+            />
+          </FormField>
         </div>
         <div className="reading-record-form__field">
-          <label className="reading-record-form__label">{t('bookReading.startPage')}</label>
-          <AppInput
-            type="number"
-            min={1}
-            max={totalPages || undefined}
-            latin
-            value={form.startPage}
-            onChange={(e) => setForm((f) => ({ ...f, startPage: e.target.value }))}
-          />
+          <FormField label={t('bookReading.startPage')} htmlFor="rr-start" required error={errors.startPage}>
+            <AppInput
+              id="rr-start"
+              type="number"
+              min={1}
+              max={totalPages || undefined}
+              latin
+              value={form.startPage}
+              onChange={(e) => {
+                const next = { ...form, startPage: e.target.value }
+                setForm(next)
+                onFieldChange?.('startPage', next)
+                onFieldChange?.('endPage', next)
+              }}
+              onBlur={() => onFieldBlur?.('startPage', form)}
+            />
+          </FormField>
         </div>
         <div className="reading-record-form__field">
-          <label className="reading-record-form__label">{t('bookReading.endPage')}</label>
-          <AppInput
-            type="number"
-            min={1}
-            max={totalPages || undefined}
-            latin
-            placeholder={t('bookReading.endPageHint')}
-            value={form.endPage}
-            onChange={(e) => setForm((f) => ({ ...f, endPage: e.target.value }))}
-          />
+          <FormField label={t('bookReading.endPage')} htmlFor="rr-end" error={errors.endPage}>
+            <AppInput
+              id="rr-end"
+              type="number"
+              min={1}
+              max={totalPages || undefined}
+              latin
+              placeholder={t('bookReading.endPageHint')}
+              value={form.endPage}
+              onChange={(e) => {
+                const next = { ...form, endPage: e.target.value }
+                setForm(next)
+                onFieldChange?.('endPage', next)
+              }}
+              onBlur={() => onFieldBlur?.('endPage', form)}
+            />
+          </FormField>
         </div>
       </div>
 

@@ -47,6 +47,7 @@ import {
   EXAM_WORKFLOW_STEPS,
   getExamWorkflowGate,
 } from '../shared/examEnums'
+import { useFormValidation, compose, required, minLength, examFormSchema } from '../shared/validation'
 import ExamContextBar from '../components/exam/ExamContextBar'
 import ExamPhaseStepper from '../components/exam/ExamPhaseStepper'
 import PageHeading from '../components/PageHeading'
@@ -237,9 +238,9 @@ export default function ExamsPage() {
     skip: !scopedExamParams || step !== 'audit',
   })
 
-  const [createExam] = useCreateExamMutation()
-  const [updateExam] = useUpdateExamMutation()
-  const [deleteExam] = useDeleteExamMutation()
+  const [createExam, { isLoading: creatingExam }] = useCreateExamMutation()
+  const [updateExam, { isLoading: updatingExam }] = useUpdateExamMutation()
+  const [deleteExam, { isLoading: deletingExam }] = useDeleteExamMutation()
   const [addClasses] = useAddExamClassesMutation()
   const [removeClass] = useRemoveExamClassMutation()
   const [saveSubjects] = useSaveExamSubjectsMutation()
@@ -253,10 +254,37 @@ export default function ExamsPage() {
   const [saveMarks] = useSaveExamMarksMutation()
   const [processResults] = useProcessExamResultsMutation()
   const [publishResults] = usePublishExamResultsMutation()
-  const [unlockExam] = useUnlockExamContainerMutation()
+  const [unlockExam, { isLoading: unlockingExam }] = useUnlockExamContainerMutation()
   const [importMarks] = useImportExamMarksMutation()
-  const [applyGrace] = useApplyGraceMarksMutation()
-  const [unlockMarks] = useUnlockExamMarksMutation()
+  const [applyGrace, { isLoading: applyingGrace }] = useApplyGraceMarksMutation()
+  const [unlockMarks, { isLoading: unlockingMarks }] = useUnlockExamMarksMutation()
+  const savingExam = creatingExam || updatingExam
+  const savingUnlock = unlockingExam || unlockingMarks
+
+  const examValidation = useFormValidation({
+    schema: examFormSchema,
+    t,
+    fieldIds: { 'name.ur': 'ex-u', endDate: 'ex-end' },
+    order: ['name.ur', 'endDate'],
+  })
+  const graceValidation = useFormValidation({
+    schema: { reason: required('validation.required') },
+    t,
+    fieldIds: { reason: 'grace-reason' },
+    order: ['reason'],
+  })
+  const deleteExamValidation = useFormValidation({
+    schema: { reason: compose(required('validation.required'), minLength(10)) },
+    t,
+    fieldIds: { reason: 'delete-exam-reason' },
+    order: ['reason'],
+  })
+  const unlockValidation = useFormValidation({
+    schema: { reason: required('validation.required') },
+    t,
+    fieldIds: { reason: 'unlock-reason' },
+    order: ['reason'],
+  })
 
   const examNames = settings?.examNames || []
 
@@ -474,6 +502,7 @@ export default function ExamsPage() {
       endDate: '',
       resultPublicationDate: '',
     })
+    examValidation.setErrors({})
     setExamModal(true)
   }
 
@@ -490,13 +519,15 @@ export default function ExamsPage() {
         ? new Date(ex.resultPublicationDate).toISOString().slice(0, 10)
         : '',
     })
+    examValidation.setErrors({})
     setExamModal(true)
   }
 
   async function handleSaveExam() {
     if (!activeSessionId) return
-    if (!examForm.name.ur?.trim() && !examForm.name.en?.trim()) {
-      flash(t('exam.nameRequired'))
+    const nextErrors = examValidation.validateAll(examForm)
+    if (Object.keys(nextErrors).length) {
+      examValidation.focusInvalid(nextErrors)
       return
     }
     const isCustomType = examForm.examTypeIndex === ''
@@ -531,31 +562,35 @@ export default function ExamsPage() {
       refetchExams()
       flash(t('exam.saved'))
     } catch (e) {
+      examValidation.applyApiError(e)
       flashError(e)
     }
   }
 
   async function handleDeleteExam() {
     if (!deleteTarget) return
-    const reason = deleteExamReason.trim()
-    if (reason.length < 10) {
-      flash(t('exam.deleteReasonTooShort'))
-      return
+    const values = { reason: deleteExamReason.trim() }
+    const nextErrors = deleteExamValidation.validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      deleteExamValidation.focusInvalid(nextErrors)
+      throw new Error('validation')
     }
     try {
       await deleteExam({
         examId: deleteTarget._id,
         sessionId: activeSessionId,
-        reason,
+        reason: values.reason,
       }).unwrap()
       if (String(selectedExamId) === String(deleteTarget._id)) {
         clearExamSelection()
       }
       setDeleteTarget(null)
       setDeleteExamReason('')
+      deleteExamValidation.setErrors({})
       refetchExams()
       flash(t('exam.deleted'))
     } catch (e) {
+      deleteExamValidation.applyApiError(e)
       flashError(e)
       throw e
     }
@@ -997,30 +1032,44 @@ export default function ExamsPage() {
   }
 
   async function handleUnlockExam() {
-    if (!examParams || !unlockReason.trim()) return
+    if (!examParams) return
+    const values = { reason: unlockReason.trim() }
+    const nextErrors = unlockValidation.validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      unlockValidation.focusInvalid(nextErrors)
+      throw new Error('validation')
+    }
     try {
-      await unlockExam({ ...examParams, reason: unlockReason.trim() }).unwrap()
+      await unlockExam({ ...examParams, reason: values.reason }).unwrap()
       refetchExams()
       flash(t('exam.unlocked'))
     } catch (e) {
+      unlockValidation.applyApiError(e)
       flashError(e)
       throw e
     }
   }
 
   async function handleUnlockMarks() {
-    if (!examParams || !unlockModal || !unlockReason.trim()) return
+    if (!examParams || !unlockModal) return
+    const values = { reason: unlockReason.trim() }
+    const nextErrors = unlockValidation.validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      unlockValidation.focusInvalid(nextErrors)
+      throw new Error('validation')
+    }
     const { scope, targetId } = unlockModal
     try {
       await unlockMarks({
         ...examParams,
         scope,
         targetId,
-        reason: unlockReason.trim(),
+        reason: values.reason,
       }).unwrap()
       await refreshExamViews()
       flash(scope === 'subject' ? t('exam.subjectUnlocked') : t('exam.studentUnlocked'))
     } catch (e) {
+      unlockValidation.applyApiError(e)
       flashError(e)
       throw e
     }
@@ -1028,12 +1077,14 @@ export default function ExamsPage() {
 
   function openUnlockModal(scope, targetId) {
     setUnlockReason('')
+    unlockValidation.setErrors({})
     setUnlockModal({ scope, targetId })
   }
 
   function closeUnlockModal() {
     setUnlockModal(null)
     setUnlockReason('')
+    unlockValidation.setErrors({})
   }
 
   async function handleUnlockSubmit() {
@@ -1068,8 +1119,9 @@ export default function ExamsPage() {
 
   async function handleApplyGrace() {
     if (!examParams || !graceTarget || !selectedDarjahId || !selectedMappingId) return
-    if (!graceForm.reason.trim()) {
-      flash(t('exam.graceReasonRequired'))
+    const nextErrors = graceValidation.validateAll(graceForm)
+    if (Object.keys(nextErrors).length) {
+      graceValidation.focusInvalid(nextErrors)
       return
     }
     try {
@@ -1083,9 +1135,11 @@ export default function ExamsPage() {
       }).unwrap()
       setGraceTarget(null)
       setGraceForm({ graceMarks: '', reason: '' })
+      graceValidation.setErrors({})
       await refreshExamViews()
       flash(t('exam.graceApplied'))
     } catch (e) {
+      graceValidation.applyApiError(e)
       flashError(e)
     }
   }
@@ -1304,6 +1358,7 @@ export default function ExamsPage() {
             }}
             onDeleteExam={(r) => {
               setDeleteExamReason('')
+              deleteExamValidation.setErrors({})
               setDeleteTarget(r)
             }}
           />
@@ -1419,6 +1474,7 @@ export default function ExamsPage() {
             onGraceStudent={(r) => {
               setGraceTarget(r)
               setGraceForm({ graceMarks: '', reason: '' })
+              graceValidation.setErrors({})
             }}
           />
         )}
@@ -1481,17 +1537,29 @@ export default function ExamsPage() {
           graceForm={graceForm}
           setGraceForm={setGraceForm}
           onApplyGrace={handleApplyGrace}
+          graceErrors={graceValidation.errors}
+          onGraceBlur={(name) => graceValidation.onBlurField(name, graceForm)}
+          onGraceChange={(name, values) => graceValidation.revalidateIfError(name, values)}
+          savingGrace={applyingGrace}
           examModal={examModal}
           setExamModal={setExamModal}
           editingExam={editingExam}
           examForm={examForm}
           setExamForm={setExamForm}
           onSaveExam={handleSaveExam}
+          examErrors={examValidation.errors}
+          onExamBlur={(name) => examValidation.onBlurField(name, examForm)}
+          onExamChange={(name, values) => examValidation.revalidateIfError(name, values)}
+          savingExam={savingExam}
           deleteTarget={deleteTarget}
           setDeleteTarget={setDeleteTarget}
           deleteExamReason={deleteExamReason}
           setDeleteExamReason={setDeleteExamReason}
           onDeleteExam={handleDeleteExam}
+          deleteExamErrors={deleteExamValidation.errors}
+          onDeleteExamBlur={(name) => deleteExamValidation.onBlurField(name, { reason: deleteExamReason })}
+          onDeleteExamChange={(name, values) => deleteExamValidation.revalidateIfError(name, values)}
+          deletingExam={deletingExam}
           deleteScheduleTarget={deleteScheduleTarget}
           setDeleteScheduleTarget={setDeleteScheduleTarget}
           onDeleteSchedule={handleDeleteSchedule}
@@ -1509,6 +1577,10 @@ export default function ExamsPage() {
           setUnlockReason={setUnlockReason}
           onCloseUnlockModal={closeUnlockModal}
           onUnlockSubmit={handleUnlockSubmit}
+          unlockErrors={unlockValidation.errors}
+          onUnlockBlur={(name) => unlockValidation.onBlurField(name, { reason: unlockReason })}
+          onUnlockChange={(name, values) => unlockValidation.revalidateIfError(name, values)}
+          savingUnlock={savingUnlock}
         />
       </Suspense>
     </div>

@@ -25,10 +25,41 @@ import { useFlash } from '../app/flash.jsx'
 import { useUnsavedChangesGuard } from '../shared/useUnsavedChangesGuard'
 import {
   formatCnicDisplay,
-  isValidCnic,
-  isValidPhone,
   trimFormStrings,
 } from '../shared/pkValidation'
+import {
+  useFormValidation,
+  compose,
+  cnic,
+  phone,
+  notFutureDate,
+} from '../shared/validation'
+
+const STUDENT_FIELD_IDS = {
+  'name.ur': 'f-name-ur',
+  phone: 'f-phone',
+  idCard: 'f-id',
+  dateOfBirth: 'f-dob',
+}
+
+const STUDENT_FIELD_TAB = {
+  'name.ur': 'basic',
+  phone: 'basic',
+  idCard: 'basic',
+  dateOfBirth: 'basic',
+}
+
+const studentSchema = {
+  'name.ur': (value, values, t) => {
+    const ur = String(values?.name?.ur || '').trim()
+    const en = String(values?.name?.en || '').trim()
+    if (!ur && !en) return t('validation.nameRequired')
+    return ''
+  },
+  phone: compose(phone()),
+  idCard: compose(cnic()),
+  dateOfBirth: compose(notFutureDate()),
+}
 
 export default function StudentFormPage() {
   const { id } = useParams()
@@ -48,13 +79,38 @@ export default function StudentFormPage() {
 
   const [enrollTab, setEnrollTab] = useState('basic')
   const [form, setForm] = useState(defaultForm)
+  const {
+    errors: fieldErrors,
+    clearError,
+    revalidateIfError,
+    onBlurField,
+    validateAll,
+    focusInvalid,
+    applyApiError,
+  } = useFormValidation({
+    schema: studentSchema,
+    t,
+    fieldIds: STUDENT_FIELD_IDS,
+    order: ['name.ur', 'phone', 'idCard', 'dateOfBirth'],
+  })
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
 
-  const markForm = useCallback((next) => {
-    setDirty(true)
-    setForm(next)
-  }, [])
+  const markForm = useCallback(
+    (next) => {
+      setDirty(true)
+      setForm((prev) => {
+        const resolved = typeof next === 'function' ? next(prev) : next
+        queueMicrotask(() => {
+          for (const key of Object.keys(STUDENT_FIELD_IDS)) {
+            revalidateIfError(key, resolved)
+          }
+        })
+        return resolved
+      })
+    },
+    [revalidateIfError]
+  )
 
   const { isBlocked, proceed, reset } = useUnsavedChangesGuard(dirty && !saving)
 
@@ -157,24 +213,12 @@ export default function StudentFormPage() {
   async function save(e) {
     e.preventDefault()
     const trimmed = trimFormStrings(form)
-    if (!isValidCnic(trimmed.idCard)) {
-      showFlash(t('validation.invalidCnic'))
+    const nextErrors = validateAll(trimmed)
+    if (Object.keys(nextErrors).length) {
+      const errKey = Object.keys(nextErrors)[0]
+      if (errKey && STUDENT_FIELD_TAB[errKey]) setEnrollTab(STUDENT_FIELD_TAB[errKey])
+      requestAnimationFrame(() => focusInvalid(nextErrors))
       return
-    }
-    if (!isValidPhone(trimmed.phone)) {
-      showFlash(t('validation.invalidPhone'))
-      return
-    }
-    if (!isValidPhone(trimmed.guardian?.phone)) {
-      showFlash(t('validation.invalidPhone'))
-      return
-    }
-    const guardians = Array.isArray(trimmed.guardians) ? trimmed.guardians : []
-    for (const g of guardians) {
-      if (!isValidPhone(g?.phone) || !isValidCnic(g?.idCard)) {
-        showFlash(!isValidCnic(g?.idCard) ? t('validation.invalidCnic') : t('validation.invalidPhone'))
-        return
-      }
     }
 
     setSaving(true)
@@ -206,7 +250,8 @@ export default function StudentFormPage() {
       setDirty(false)
       navigate('/students')
     } catch (err) {
-      showFlash(err?.data?.message || err?.error || err?.message || t('common.error'))
+      const apiMsg = applyApiError(err)
+      showFlash(apiMsg || err?.data?.message || err?.error || err?.message || t('common.error'))
     } finally {
       setSaving(false)
     }
@@ -297,6 +342,9 @@ export default function StudentFormPage() {
           startCam={startCam}
           captureCam={captureCam}
           onPhotoFileChange={onPhotoFileChange}
+          fieldErrors={fieldErrors}
+          onBlurField={(name) => onBlurField(name, form)}
+          onClearError={clearError}
         />
         <div className="d-flex flex-wrap gap-2 justify-content-end mt-4 pt-3 border-top border-secondary-subtle">
           <button
@@ -309,7 +357,7 @@ export default function StudentFormPage() {
             {flText(FL.cancel, lng)}
           </button>
           <button type="submit" className="btn btn-success" disabled={saving} lang={lang}>
-            {flText(FL.save, lng)}
+            {saving ? t('validation.formSaving') : flText(FL.save, lng)}
           </button>
         </div>
       </form>

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { setCredentials } from '../features/auth/authSlice'
 import { useLoginMutation } from '../services/api'
 import { formatDisplayDate } from '../shared/formatDisplayDate'
+import { useFormValidation, compose, required, email } from '../shared/validation'
 import './authSignIn.css'
 
 /** Islamabad coordinates for prayer times. */
@@ -88,12 +89,34 @@ export default function LoginPage() {
 
   const from = location.state?.from?.pathname || '/'
   const [login, { isLoading, error }] = useLoginMutation()
-  const [email, setEmail] = useState('')
+  const [emailValue, setEmailValue] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
   const [now, setNow] = useState(() => new Date())
   const [prayerTimes, setPrayerTimes] = useState(FALLBACK_TIMES)
+
+  const loginSchema = useMemo(
+    () => ({
+      email: compose(required('validation.emailRequired'), email()),
+      password: required('validation.passwordRequired'),
+    }),
+    []
+  )
+  const {
+    errors: fieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+    applyApiError,
+    setErrors,
+  } = useFormValidation({
+    schema: loginSchema,
+    t,
+    fieldIds: { email: 'login-email', password: 'login-pass' },
+    order: ['email', 'password'],
+  })
 
   const isUr = i18n.language === 'ur'
   const locale = isUr ? 'ur-PK' : 'en-PK'
@@ -193,8 +216,14 @@ export default function LoginPage() {
 
   async function onSubmit(e) {
     e.preventDefault()
+    const values = { email: emailValue.trim(), password }
+    const nextErrors = validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      focusInvalid(nextErrors)
+      return
+    }
     try {
-      const data = await login({ email: email.trim(), password }).unwrap()
+      const data = await login({ email: values.email, password: values.password }).unwrap()
       dispatch(
         setCredentials({
           token: data.token || data.accessToken,
@@ -203,12 +232,17 @@ export default function LoginPage() {
           remember,
         })
       )
-    } catch {
-      /* handled */
+    } catch (err) {
+      const apiMsg = applyApiError(err)
+      if (!Object.keys(err?.data?.fields || {}).length) {
+        setErrors({
+          email: apiMsg || t('auth.signin.invalidCredentials'),
+        })
+      }
     }
   }
 
-  const errMsg = (error?.data && error.data.message) || (error ? t('auth.signin.invalidCredentials') : '')
+  const errMsg = (error?.data && error.data.message) || ''
 
   return (
     <div className="auth-signin" dir={isUr ? 'rtl' : 'ltr'}>
@@ -293,8 +327,8 @@ export default function LoginPage() {
             <p className="auth-signin__lead">{t('auth.signin.lead')}</p>
           </div>
 
-          <form className="auth-signin__form" onSubmit={onSubmit}>
-            <div className="auth-signin__field">
+          <form className="auth-signin__form" onSubmit={onSubmit} noValidate>
+            <div className={`auth-signin__field${fieldErrors.email ? ' auth-signin__field--error' : ''}`}>
               <label htmlFor="login-email">{t('auth.signin.email')}</label>
               <div className="auth-signin__input-wrap">
                 <svg className="auth-signin__input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -305,16 +339,28 @@ export default function LoginPage() {
                   id="login-email"
                   type="email"
                   className="auth-signin__input latin-input"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={emailValue}
+                  onChange={(e) => {
+                    setEmailValue(e.target.value)
+                    revalidateIfError('email', { email: e.target.value, password })
+                  }}
+                  onBlur={() => onBlurField('email', { email: emailValue, password })}
                   autoComplete="email"
                   placeholder={t('auth.signin.emailPlaceholder')}
-                  required
+                  aria-invalid={fieldErrors.email ? true : undefined}
+                  aria-describedby={fieldErrors.email ? 'login-email-msg' : undefined}
                 />
+              </div>
+              <div className="auth-signin__field-msg" id="login-email-msg">
+                {fieldErrors.email ? (
+                  <p className="auth-signin__field-error" role="alert">
+                    {fieldErrors.email}
+                  </p>
+                ) : null}
               </div>
             </div>
 
-            <div className="auth-signin__field">
+            <div className={`auth-signin__field${fieldErrors.password ? ' auth-signin__field--error' : ''}`}>
               <label htmlFor="login-pass">{t('auth.password')}</label>
               <div className="auth-signin__input-wrap">
                 <svg className="auth-signin__input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -326,10 +372,15 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   className="auth-signin__input auth-signin__input--password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    revalidateIfError('password', { email: emailValue, password: e.target.value })
+                  }}
+                  onBlur={() => onBlurField('password', { email: emailValue, password })}
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  required
+                  aria-invalid={fieldErrors.password ? true : undefined}
+                  aria-describedby={fieldErrors.password ? 'login-pass-msg' : undefined}
                 />
                 <button
                   type="button"
@@ -349,6 +400,13 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              <div className="auth-signin__field-msg" id="login-pass-msg">
+                {fieldErrors.password ? (
+                  <p className="auth-signin__field-error" role="alert">
+                    {fieldErrors.password}
+                  </p>
+                ) : null}
+              </div>
             </div>
 
             <div className="auth-signin__row">
@@ -365,13 +423,15 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            {errMsg ? (
+            {errMsg && !fieldErrors.email && !fieldErrors.password ? (
               <div className="auth-signin__error" role="alert">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                   <circle cx="12" cy="12" r="9" />
                   <path d="M12 8v5M12 16h.01" />
                 </svg>
-                {errMsg}
+                {errMsg === 'Validation failed' || errMsg === 'Please fix the highlighted fields.'
+                  ? t('validation.formFixFields')
+                  : errMsg}
               </div>
             ) : null}
 

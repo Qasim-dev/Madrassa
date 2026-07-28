@@ -180,6 +180,8 @@ const AppSelect = forwardRef(function AppSelect(
     dir,
     lang, // eslint-disable-line no-unused-vars
     size, // eslint-disable-line no-unused-vars
+    'aria-describedby': ariaDescribedBy,
+    'aria-errormessage': ariaErrorMessage,
     ...rest
   },
   ref
@@ -304,6 +306,8 @@ const AppSelect = forwardRef(function AppSelect(
       className={['app-select', className].filter(Boolean).join(' ')}
       aria-required={required || undefined}
       aria-invalid={invalid || undefined}
+      aria-describedby={ariaDescribedBy}
+      aria-errormessage={ariaErrorMessage}
       {...selectProps}
     />
   )

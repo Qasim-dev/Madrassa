@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PageHeading from '../components/PageHeading'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
@@ -8,9 +8,18 @@ import {
   usePatchUserMutation,
   useDeleteUserMutation,
 } from '../services/api'
-import { AppInput, AppSelect } from '../components/ui'
+import { AppInput, AppSelect, FormField, FormRow } from '../components/ui'
 import DataTable from '../components/DataTable'
 import { loc } from '../shared/localized'
+import {
+  useFormValidation,
+  compose,
+  required,
+  email,
+  passwordMin,
+} from '../shared/validation'
+
+const FIELD_IDS = { email: 'u-email', password: 'u-pass' }
 
 export default function UsersPage() {
   const { t, i18n } = useTranslation()
@@ -21,18 +30,47 @@ export default function UsersPage() {
   const [patchUser] = usePatchUserMutation()
   const [deleteUser] = useDeleteUserMutation()
   const [form, setForm] = useState({ email: '', password: '', role: 'staff' })
-  const [error, setError] = useState('')
+  const [formError, setFormError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
+
+  const schema = useMemo(
+    () => ({
+      email: compose(required('validation.emailRequired'), email()),
+      password: compose(required('validation.passwordRequired'), passwordMin(8)),
+    }),
+    []
+  )
+  const {
+    errors: fieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+    applyApiError,
+    setErrors,
+  } = useFormValidation({
+    schema,
+    t,
+    fieldIds: FIELD_IDS,
+    order: ['email', 'password'],
+  })
 
   async function onCreate(e) {
     e.preventDefault()
-    setError('')
+    setFormError('')
+    const nextErrors = validateAll(form)
+    if (Object.keys(nextErrors).length) {
+      focusInvalid(nextErrors)
+      return
+    }
     try {
       await createUser(form).unwrap()
       setForm({ email: '', password: '', role: 'staff' })
+      setErrors({})
       refetch()
     } catch (err) {
-      setError(err?.data?.message || (en ? 'Create failed' : 'بنانے میں ناکامی'))
+      const apiMsg = applyApiError(err)
+      setFormError(apiMsg || err?.data?.message || (en ? 'Could not create user.' : 'صارف نہیں بن سکا۔'))
     }
   }
 
@@ -77,38 +115,42 @@ export default function UsersPage() {
     <div>
       <PageHeading subtitle={en ? 'Invite staff with limited access' : 'محدود رسائی والے عملے کو شامل کریں'} />
 
-      <form className="content-panel p-3 mb-3" onSubmit={onCreate}>
-        <div className="row g-2 align-items-end">
-          <div className="col-md-4">
-            <label className="form-label small" htmlFor="u-email">
-              Email
-            </label>
+      <form className="content-panel p-3 mb-3" onSubmit={onCreate} noValidate>
+        <FormRow>
+          <FormField label="Email" htmlFor="u-email" col={4} required error={fieldErrors.email}>
             <AppInput
               id="u-email"
               type="email"
               latin
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
+              onChange={(e) => {
+                const next = { ...form, email: e.target.value }
+                setForm(next)
+                revalidateIfError('email', next)
+              }}
+              onBlur={() => onBlurField('email', form)}
             />
-          </div>
-          <div className="col-md-3">
-            <label className="form-label small" htmlFor="u-pass">
-              {en ? 'Temp password' : 'عارضی پاس ورڈ'}
-            </label>
+          </FormField>
+          <FormField
+            label={en ? 'Temp password' : 'عارضی پاس ورڈ'}
+            htmlFor="u-pass"
+            col={3}
+            required
+            error={fieldErrors.password}
+          >
             <AppInput
               id="u-pass"
               type="password"
               value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              minLength={8}
-              required
+              onChange={(e) => {
+                const next = { ...form, password: e.target.value }
+                setForm(next)
+                revalidateIfError('password', next)
+              }}
+              onBlur={() => onBlurField('password', form)}
             />
-          </div>
-          <div className="col-md-2">
-            <label className="form-label small" htmlFor="u-role">
-              Role
-            </label>
+          </FormField>
+          <FormField label="Role" htmlFor="u-role" col={2}>
             <AppSelect
               id="u-role"
               value={form.role}
@@ -118,14 +160,22 @@ export default function UsersPage() {
                 { value: 'admin', label: 'Admin' },
               ]}
             />
-          </div>
-          <div className="col-md-3">
+          </FormField>
+          <div className="app-form-col app-form-col--3 d-flex align-items-end">
             <button type="submit" className="btn btn-success w-100" disabled={creating}>
-              {en ? 'Create user' : 'صارف بنائیں'}
+              {creating
+                ? t('validation.formSaving')
+                : en
+                  ? 'Create user'
+                  : 'صارف بنائیں'}
             </button>
           </div>
-        </div>
-        {error ? <p className="text-danger small mt-2 mb-0">{error}</p> : null}
+        </FormRow>
+        {formError ? (
+          <p className="text-danger small mt-2 mb-0" role="alert">
+            {formError}
+          </p>
+        ) : null}
       </form>
 
       <DataTable columns={columns} rows={users} loading={isLoading} rowKey={(r) => r._id || r.id} />

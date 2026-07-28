@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCredentials } from '../features/auth/authSlice'
 import { useRegisterMutation } from '../services/api'
-import BilingualLabel from '../components/BilingualLabel'
-import { AppInput } from '../components/ui'
+import { AppInput, FormField } from '../components/ui'
+import { useFormValidation, signupSchema } from '../shared/validation'
 
 export default function SignupPage() {
   const { t, i18n } = useTranslation()
@@ -22,7 +22,29 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [formError, setFormError] = useState('')
+
+  const fieldIds = useMemo(
+    () => ({
+      'name.ur': 'signup-name-ur',
+      email: 'signup-email',
+      password: 'signup-pass',
+      confirmPassword: 'signup-pass2',
+    }),
+    []
+  )
+  const {
+    errors: fieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+    applyApiError,
+  } = useFormValidation({
+    schema: signupSchema,
+    t,
+    fieldIds,
+    order: ['name.ur', 'email', 'password', 'confirmPassword'],
+  })
 
   useEffect(() => {
     if (token) {
@@ -36,25 +58,23 @@ export default function SignupPage() {
     localStorage.setItem('locale', n)
   }
 
+  function currentValues(overrides = {}) {
+    return { nameUr, nameEn, email, password, confirmPassword, ...overrides }
+  }
+
   async function onSubmit(e) {
     e.preventDefault()
-    setFormError('')
-    if (!nameUr.trim() && !nameEn.trim()) {
-      setFormError(t('auth.orgNameRequired'))
-      return
-    }
-    if (password !== confirmPassword) {
-      return
-    }
-    if (String(password).length < 8) {
-      setFormError(t('auth.passwordTooShort'))
+    const values = currentValues({ email: email.trim() })
+    const nextErrors = validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      focusInvalid(nextErrors)
       return
     }
     try {
       const data = await register({
         nameUr: nameUr.trim(),
         nameEn: nameEn.trim(),
-        email: email.trim(),
+        email: values.email,
         password,
       }).unwrap()
       dispatch(
@@ -65,12 +85,10 @@ export default function SignupPage() {
           remember: true,
         })
       )
-    } catch {
-      /* handled */
+    } catch (err) {
+      applyApiError(err)
     }
   }
-
-  const mismatch = password && confirmPassword && password !== confirmPassword
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4 page-gradient">
@@ -103,86 +121,110 @@ export default function SignupPage() {
             <p className="text-muted small mb-0">{t('auth.signupSubtitleEmail')}</p>
           </div>
 
-          <form onSubmit={onSubmit}>
-            <div className="mb-3" data-lang-field="ur">
-              <BilingualLabel k="nameUrField" htmlFor="signup-name-ur" data-lang-field="ur" />
+          <form onSubmit={onSubmit} noValidate>
+            <FormField
+              k="nameUrField"
+              htmlFor="signup-name-ur"
+              langField="ur"
+              className="mb-3"
+              error={fieldErrors['name.ur']}
+            >
               <AppInput
                 id="signup-name-ur"
                 className="rounded-3 border-secondary-subtle"
                 value={nameUr}
-                onChange={(e) => setNameUr(e.target.value)}
+                onChange={(e) => {
+                  setNameUr(e.target.value)
+                  revalidateIfError('name.ur', currentValues({ nameUr: e.target.value }))
+                }}
+                onBlur={() => onBlurField('name.ur', currentValues())}
                 dir="rtl"
                 data-lang-field="ur"
               />
-            </div>
-            <div className="mb-3" data-lang-field="en">
-              <BilingualLabel k="nameEnField" htmlFor="signup-name-en" data-lang-field="en" />
+            </FormField>
+            <FormField k="nameEnField" htmlFor="signup-name-en" langField="en" className="mb-3">
               <AppInput
                 id="signup-name-en"
                 latin
                 className="rounded-3 border-secondary-subtle"
                 value={nameEn}
-                onChange={(e) => setNameEn(e.target.value)}
+                onChange={(e) => {
+                  setNameEn(e.target.value)
+                  revalidateIfError('name.ur', currentValues({ nameEn: e.target.value }))
+                }}
+                onBlur={() => onBlurField('name.ur', currentValues())}
                 data-lang-field="en"
               />
-            </div>
-            <div className="mb-3">
-              <BilingualLabel k="email" htmlFor="signup-email" required />
+            </FormField>
+            <FormField
+              k="email"
+              htmlFor="signup-email"
+              required
+              className="mb-3"
+              hint={t('auth.adminEmailHint')}
+              error={fieldErrors.email}
+            >
               <AppInput
                 id="signup-email"
                 type="email"
                 latin
                 className="rounded-3 border-secondary-subtle"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  revalidateIfError('email', currentValues({ email: e.target.value }))
+                }}
+                onBlur={() => onBlurField('email', currentValues())}
                 autoComplete="email"
               />
-              <p className="form-text small text-muted mb-0 mt-1">{t('auth.adminEmailHint')}</p>
-            </div>
-            <div className="mb-3">
-              <BilingualLabel k="authPassword" htmlFor="signup-pass" required />
+            </FormField>
+            <FormField
+              k="authPassword"
+              htmlFor="signup-pass"
+              required
+              className="mb-3"
+              error={fieldErrors.password}
+            >
               <AppInput
                 id="signup-pass"
                 type="password"
                 className="rounded-3 border-secondary-subtle"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={8}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  revalidateIfError('password', currentValues({ password: e.target.value }))
+                  revalidateIfError('confirmPassword', currentValues({ password: e.target.value }))
+                }}
+                onBlur={() => onBlurField('password', currentValues())}
                 autoComplete="new-password"
               />
-            </div>
-            <div className="mb-3">
-              <BilingualLabel k="authConfirmPassword" htmlFor="signup-pass2" required />
+            </FormField>
+            <FormField
+              k="authConfirmPassword"
+              htmlFor="signup-pass2"
+              required
+              className="mb-3"
+              error={fieldErrors.confirmPassword}
+            >
               <AppInput
                 id="signup-pass2"
                 type="password"
                 className="rounded-3 border-secondary-subtle"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                minLength={8}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value)
+                  revalidateIfError('confirmPassword', currentValues({ confirmPassword: e.target.value }))
+                }}
+                onBlur={() => onBlurField('confirmPassword', currentValues())}
                 autoComplete="new-password"
               />
-            </div>
-            {mismatch && (
-              <div className="alert alert-warning py-2 small rounded-3 mb-3" role="alert">
-                {t('auth.passwordMismatch')}
-              </div>
-            )}
-            {formError && (
-              <div className="alert alert-warning py-2 small rounded-3 mb-3" role="alert">
-                {formError}
-              </div>
-            )}
+            </FormField>
             {error && (
               <div className="alert alert-danger py-2 small rounded-3 mb-3" role="alert">
                 {(error.data && error.data.message) || t('auth.signupFailed')}
               </div>
             )}
-            <button
-              type="submit"
-              className="btn btn-success w-100"
-              disabled={isLoading || mismatch}
-            >
+            <button type="submit" className="btn btn-success w-100" disabled={isLoading}>
               {isLoading ? t('common.loading') : t('auth.signupSubmit')}
             </button>
           </form>

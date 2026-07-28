@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { logout, setUser } from '../features/auth/authSlice'
 import {
@@ -17,11 +17,32 @@ import { loc, flText } from '../shared/localized'
 import { FL } from '../shared/fieldLabels'
 import { absoluteAssetUrl } from '../shared/assetUrl'
 import { getInstitutionName, getInstitutionInitial } from '../shared/institutionBrand'
+import { can } from '../shared/permissions'
 import PageHeading from '../components/PageHeading'
+import BasicTartibatPanel from '../components/BasicTartibatPanel'
 import { AppInput, FormField, FormRow } from '../components/ui'
 import { useFlash } from '../app/flash.jsx'
+import { useFormValidation, profilePasswordSchema, profileAccountSchema } from '../shared/validation'
 
-function SettingsSection({ title, hint, children, onSave, saveLabel, saveVariant = 'success', formId, className = '' }) {
+const instituteNameSchema = {
+  'tenantName.ur': (_v, values, t) => {
+    const ur = String(values?.tenantName?.ur || '').trim()
+    const en = String(values?.tenantName?.en || '').trim()
+    return ur || en ? '' : t('validation.nameRequired')
+  },
+}
+
+function SettingsSection({
+  title,
+  hint,
+  children,
+  onSave,
+  saveLabel,
+  saveVariant = 'success',
+  saveDisabled = false,
+  formId,
+  className = '',
+}) {
   return (
     <section className={`settings-section ${className}`.trim()}>
       <header className="settings-section__head">
@@ -30,7 +51,12 @@ function SettingsSection({ title, hint, children, onSave, saveLabel, saveVariant
           {hint ? <p className="settings-section__hint mb-0">{hint}</p> : null}
         </div>
         {onSave ? (
-          <button type="submit" form={formId} className={`btn btn-${saveVariant} btn-sm settings-section__save`}>
+          <button
+            type="submit"
+            form={formId}
+            className={`btn btn-${saveVariant} btn-sm settings-section__save`}
+            disabled={saveDisabled}
+          >
             {saveLabel}
           </button>
         ) : null}
@@ -48,14 +74,17 @@ export default function ProfilePage() {
   const navigate = useNavigate()
   const { showFlash } = useFlash()
   const logoInputRef = useRef(null)
+  const authUser = useSelector((s) => s.auth.user)
+  const canEditSettings = can(authUser, 'settings:write')
 
   const { data: me, refetch } = useGetMeQuery()
   const { data: settings, refetch: refetchSettings } = useGetSettingsQuery()
-  const [patchMe] = usePatchMeMutation()
-  const [changePw] = useChangePasswordMutation()
-  const [patchSettings] = usePatchSettingsMutation()
-  const [patchTenant] = usePatchTenantMutation()
+  const [patchMe, { isLoading: savingAccount }] = usePatchMeMutation()
+  const [changePw, { isLoading: savingPassword }] = useChangePasswordMutation()
+  const [patchSettings, { isLoading: savingSettings }] = usePatchSettingsMutation()
+  const [patchTenant, { isLoading: savingTenant }] = usePatchTenantMutation()
   const [uploadLogo, { isLoading: logoUploading }] = useUploadTenantLogoMutation()
+  const savingInstitute = savingTenant || savingSettings
 
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -65,6 +94,25 @@ export default function ProfilePage() {
   const [college, setCollege] = useState({ ur: '', en: '' })
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
+
+  const accountValidation = useFormValidation({
+    schema: profileAccountSchema,
+    t,
+    fieldIds: { email: 'p-email' },
+    order: ['email'],
+  })
+  const instituteValidation = useFormValidation({
+    schema: instituteNameSchema,
+    t,
+    fieldIds: { 'tenantName.ur': 'p-tenant-ur' },
+    order: ['tenantName.ur'],
+  })
+  const passwordValidation = useFormValidation({
+    schema: profilePasswordSchema,
+    t,
+    fieldIds: { currentPassword: 'p-cur-pw', newPassword: 'p-new-pw' },
+    order: ['currentPassword', 'newPassword'],
+  })
 
   useEffect(() => {
     if (me) {
@@ -86,20 +134,42 @@ export default function ProfilePage() {
 
   async function saveProfile(e) {
     e.preventDefault()
-    const updated = await patchMe({ email, phone, name }).unwrap()
-    dispatch(setUser(updated))
-    refetch()
+    const values = { email: email.trim() }
+    const nextErrors = accountValidation.validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      accountValidation.focusInvalid(nextErrors)
+      return
+    }
+    try {
+      const updated = await patchMe({ email: values.email, phone, name }).unwrap()
+      dispatch(setUser(updated))
+      refetch()
+    } catch (err) {
+      const apiMsg = accountValidation.applyApiError(err)
+      showFlash(apiMsg || err?.data?.message || err?.error || t('common.error'))
+    }
   }
 
   async function saveInstitute(e) {
     e.preventDefault()
-    const [tenantRes] = await Promise.all([
-      patchTenant({ name: tenantName }).unwrap(),
-      patchSettings({ address: addr, collegeAffiliation: college }).unwrap(),
-    ])
-    if (tenantRes?.tenant) dispatch(setUser({ tenant: tenantRes.tenant }))
-    refetchSettings()
-    refetch()
+    const values = { tenantName }
+    const nextErrors = instituteValidation.validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      instituteValidation.focusInvalid(nextErrors)
+      return
+    }
+    try {
+      const [tenantRes] = await Promise.all([
+        patchTenant({ name: tenantName }).unwrap(),
+        patchSettings({ address: addr, collegeAffiliation: college }).unwrap(),
+      ])
+      if (tenantRes?.tenant) dispatch(setUser({ tenant: tenantRes.tenant }))
+      refetchSettings()
+      refetch()
+    } catch (err) {
+      const apiMsg = instituteValidation.applyApiError(err)
+      showFlash(apiMsg || err?.data?.message || err?.error || t('common.error'))
+    }
   }
 
   async function onLogoChange(e) {
@@ -123,12 +193,23 @@ export default function ProfilePage() {
 
   async function savePassword(e) {
     e.preventDefault()
-    await changePw({ currentPassword, newPassword }).unwrap()
-    setCurrentPassword('')
-    setNewPassword('')
-    dispatch(logout())
-    dispatch(api.util.resetApiState())
-    navigate('/login', { replace: true })
+    const values = { currentPassword, newPassword }
+    const nextErrors = passwordValidation.validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      passwordValidation.focusInvalid(nextErrors)
+      return
+    }
+    try {
+      await changePw(values).unwrap()
+      setCurrentPassword('')
+      setNewPassword('')
+      dispatch(logout())
+      dispatch(api.util.resetApiState())
+      navigate('/login', { replace: true })
+    } catch (err) {
+      const apiMsg = passwordValidation.applyApiError(err)
+      showFlash(apiMsg || err?.data?.message || err?.error || t('common.error'))
+    }
   }
 
   const accountTitle = en ? 'Your account' : 'آپ کا اکاؤنٹ'
@@ -171,9 +252,10 @@ export default function ProfilePage() {
             formId="profile-account-form"
             onSave
             saveLabel={t('common.save')}
+            saveDisabled={savingAccount}
             className="settings-section--split"
           >
-            <form id="profile-account-form" onSubmit={saveProfile} className="settings-form">
+            <form id="profile-account-form" onSubmit={saveProfile} className="settings-form" noValidate>
               <div className="settings-form__stack">
                 <FormField k="nameUrField" htmlFor="p-name-ur" langField="ur">
                   <AppInput
@@ -192,13 +274,17 @@ export default function ProfilePage() {
                     data-lang-field="en"
                   />
                 </FormField>
-                <FormField k="email" htmlFor="p-email">
+                <FormField k="email" htmlFor="p-email" required error={accountValidation.errors.email}>
                   <AppInput
                     id="p-email"
                     type="email"
                     latin
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      accountValidation.revalidateIfError('email', { email: e.target.value })
+                    }}
+                    onBlur={() => accountValidation.onBlurField('email', { email })}
                   />
                 </FormField>
                 <FormField k="phone" htmlFor="p-phone">
@@ -214,15 +300,26 @@ export default function ProfilePage() {
             formId="profile-institute-form"
             onSave
             saveLabel={t('common.save')}
+            saveDisabled={savingInstitute}
             className="settings-section--split"
           >
-            <form id="profile-institute-form" onSubmit={saveInstitute} className="settings-form">
+            <form id="profile-institute-form" onSubmit={saveInstitute} className="settings-form" noValidate>
               <div className="settings-form__stack">
-                <FormField k="institutionNameUr" htmlFor="p-tenant-ur" langField="ur">
+                <FormField
+                  k="institutionNameUr"
+                  htmlFor="p-tenant-ur"
+                  langField="ur"
+                  error={instituteValidation.errors['tenantName.ur']}
+                >
                   <AppInput
                     id="p-tenant-ur"
                     value={tenantName.ur}
-                    onChange={(e) => setTenantName({ ...tenantName, ur: e.target.value })}
+                    onChange={(e) => {
+                      const next = { ...tenantName, ur: e.target.value }
+                      setTenantName(next)
+                      instituteValidation.revalidateIfError('tenantName.ur', { tenantName: next })
+                    }}
+                    onBlur={() => instituteValidation.onBlurField('tenantName.ur', { tenantName })}
                     data-lang-field="ur"
                   />
                 </FormField>
@@ -231,7 +328,12 @@ export default function ProfilePage() {
                     id="p-tenant-en"
                     latin
                     value={tenantName.en}
-                    onChange={(e) => setTenantName({ ...tenantName, en: e.target.value })}
+                    onChange={(e) => {
+                      const next = { ...tenantName, en: e.target.value }
+                      setTenantName(next)
+                      instituteValidation.revalidateIfError('tenantName.ur', { tenantName: next })
+                    }}
+                    onBlur={() => instituteValidation.onBlurField('tenantName.ur', { tenantName })}
                     data-lang-field="en"
                   />
                 </FormField>
@@ -319,32 +421,63 @@ export default function ProfilePage() {
           onSave
           saveLabel={t('common.save')}
           saveVariant="outline-secondary"
+          saveDisabled={savingPassword}
           className="settings-section--footer"
         >
-          <form id="profile-password-form" onSubmit={savePassword} className="settings-form">
+          <form id="profile-password-form" onSubmit={savePassword} className="settings-form" noValidate>
             <FormRow className="settings-form__row settings-form__row--inline">
-              <FormField k="currentPassword" htmlFor="p-cur-pw" col={6}>
+              <FormField
+                k="currentPassword"
+                htmlFor="p-cur-pw"
+                col={6}
+                required
+                error={passwordValidation.errors.currentPassword}
+              >
                 <AppInput
                   id="p-cur-pw"
                   type="password"
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value)
+                    passwordValidation.revalidateIfError('currentPassword', {
+                      currentPassword: e.target.value,
+                      newPassword,
+                    })
+                  }}
+                  onBlur={() =>
+                    passwordValidation.onBlurField('currentPassword', { currentPassword, newPassword })
+                  }
                 />
               </FormField>
-              <FormField k="newPassword" htmlFor="p-new-pw" col={6}>
+              <FormField
+                k="newPassword"
+                htmlFor="p-new-pw"
+                col={6}
+                required
+                error={passwordValidation.errors.newPassword}
+              >
                 <AppInput
                   id="p-new-pw"
                   type="password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={8}
-                  required
+                  onChange={(e) => {
+                    setNewPassword(e.target.value)
+                    passwordValidation.revalidateIfError('newPassword', {
+                      currentPassword,
+                      newPassword: e.target.value,
+                    })
+                  }}
+                  onBlur={() =>
+                    passwordValidation.onBlurField('newPassword', { currentPassword, newPassword })
+                  }
                 />
               </FormField>
             </FormRow>
           </form>
         </SettingsSection>
       </div>
+
+      {canEditSettings ? <BasicTartibatPanel /> : null}
     </div>
   )
 }

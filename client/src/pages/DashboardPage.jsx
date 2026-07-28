@@ -91,7 +91,7 @@ export default function DashboardPage() {
       countLabel: countLabelTotal,
     },
     {
-      to: "/grades",
+      to: "/tartibat/darajat",
       labelKey: "dashboard.tileNewGrade",
       icon: "grades",
       tone: "emerald",

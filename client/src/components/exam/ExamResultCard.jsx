@@ -58,7 +58,7 @@ function formatPct(n) {
 }
 
 function darjahLine(row, lng) {
-  const parts = [loc(row.darjahName, lng), loc(row.sectionName, lng)].filter(Boolean)
+  const parts = [loc(row.sectionName, lng), loc(row.darjahName, lng)].filter(Boolean)
   return parts.join(' — ') || '—'
 }
 

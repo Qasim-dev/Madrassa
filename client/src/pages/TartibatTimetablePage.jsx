@@ -16,11 +16,11 @@ import {
   useDeleteTimetableEntryMutation,
 } from '../services/api'
 import { loc } from '../shared/localized'
-import { AppInput, AppSelect, AppCheckbox } from '../components/ui'
+import { AppInput, AppSelect, AppCheckbox, FormField } from '../components/ui'
 import PageHeading from '../components/PageHeading'
 import AppModalShell from '../components/AppModalShell'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
-import BilingualLabel from '../components/BilingualLabel'
+import { useFormValidation, required } from '../shared/validation'
 
 /** Madrassa week: Saturday → Thursday; Friday is optional via toolbar toggle. */
 const CORE_DAYS = [
@@ -50,6 +50,35 @@ function timeToMinutes(hhmm) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim())
   if (!m) return NaN
   return Number(m[1]) * 60 + Number(m[2])
+}
+
+const ENTRY_FIELD_IDS = {
+  subjectId: 'tt-sub',
+  darjahId: 'tt-dj',
+  day: 'tt-day',
+  slotId: 'tt-slot',
+  teacherId: 'tt-teach',
+}
+
+const entryFormSchema = {
+  subjectId: required('validation.selectRequired'),
+  darjahId: required('validation.selectRequired'),
+  day: required('validation.selectRequired'),
+  slotId: required('validation.selectRequired'),
+  teacherId: required('validation.selectRequired'),
+}
+
+const SLOT_FIELD_IDS = { startTime: 'tt-slot-start', endTime: 'tt-slot-end' }
+
+const slotFormSchema = {
+  startTime: required('validation.required'),
+  endTime: (value, values, t) => {
+    if (!value) return t('validation.required')
+    const a = timeToMinutes(values.startTime)
+    const b = timeToMinutes(value)
+    if (Number.isNaN(a) || Number.isNaN(b)) return t('validation.dateInvalid')
+    return b <= a ? t('validation.dateBefore') : ''
+  },
 }
 
 export default function TartibatTimetablePage() {
@@ -108,6 +137,38 @@ export default function TartibatTimetablePage() {
   const [slotFormError, setSlotFormError] = useState('')
   const [slotPendingDelete, setSlotPendingDelete] = useState(null)
   const [entryPendingDelete, setEntryPendingDelete] = useState(null)
+  const [entrySaving, setEntrySaving] = useState(false)
+  const [slotSaving, setSlotSaving] = useState(false)
+
+  const {
+    errors: entryErrors,
+    onBlurField: onBlurEntryField,
+    revalidateIfError: revalidateEntryIfError,
+    validateAll: validateEntryAll,
+    focusInvalid: focusEntryInvalid,
+    applyApiError: applyEntryApiError,
+    setErrors: setEntryErrors,
+  } = useFormValidation({
+    schema: entryFormSchema,
+    t,
+    fieldIds: ENTRY_FIELD_IDS,
+    order: ['subjectId', 'darjahId', 'day', 'slotId', 'teacherId'],
+  })
+
+  const {
+    errors: slotErrors,
+    onBlurField: onBlurSlotField,
+    revalidateIfError: revalidateSlotIfError,
+    validateAll: validateSlotAll,
+    focusInvalid: focusSlotInvalid,
+    applyApiError: applySlotApiError,
+    setErrors: setSlotErrors,
+  } = useFormValidation({
+    schema: slotFormSchema,
+    t,
+    fieldIds: SLOT_FIELD_IDS,
+    order: ['startTime', 'endTime'],
+  })
 
   const darjahOptions = useMemo(
     () => darajat.filter((d) => String(d.sessionId?._id || d.sessionId || '') === String(sessionId)),
@@ -186,6 +247,7 @@ export default function TartibatTimetablePage() {
     const slotObj = sortedSlots.find((s) => String(s._id) === String(slotId))
     if (slotObj && isBreakSlot(slotObj)) return
     setEntryFormError('')
+    setEntryErrors({})
     setMf({
       darjahId: prefDarjahId || entry?.darjahId?._id || entry?.darjahId || darjahFilter || '',
       day: entry?.day || day,
@@ -206,7 +268,11 @@ export default function TartibatTimetablePage() {
   async function saveEntryModal(e) {
     e.preventDefault()
     setEntryFormError('')
-    if (!sessionId || !mf.darjahId || !mf.slotId || !mf.teacherId || !mf.day) return
+    const next = validateEntryAll(mf)
+    if (Object.keys(next).length) {
+      focusEntryInvalid(next)
+      return
+    }
     const body = {
       sessionId,
       darjahId: mf.darjahId,
@@ -217,6 +283,7 @@ export default function TartibatTimetablePage() {
       bookId: mf.bookId || null,
       room: (mf.room || '').trim(),
     }
+    setEntrySaving(true)
     try {
       if (entryModal?.entry?._id) {
         await updateEntry({ id: entryModal.entry._id, ...body }).unwrap()
@@ -226,13 +293,16 @@ export default function TartibatTimetablePage() {
       closeEntryModal()
       refetchEntries()
     } catch (err) {
-      const msg = err?.data?.message || err?.error || String(err)
-      setEntryFormError(msg)
+      const apiMsg = applyEntryApiError(err)
+      setEntryFormError(apiMsg || err?.data?.message || err?.error || String(err))
+    } finally {
+      setEntrySaving(false)
     }
   }
 
   function openSlotCreate() {
     setSlotFormError('')
+    setSlotErrors({})
     setSlotDraft({
       startTime: '08:00',
       endTime: '08:45',
@@ -245,6 +315,7 @@ export default function TartibatTimetablePage() {
 
   function openSlotEdit(slot) {
     setSlotFormError('')
+    setSlotErrors({})
     setSlotDraft({
       startTime: slot.startTime || '08:00',
       endTime: slot.endTime || '08:45',
@@ -265,10 +336,9 @@ export default function TartibatTimetablePage() {
     e.preventDefault()
     setSlotFormError('')
     if (!sessionId) return
-    const a = timeToMinutes(slotDraft.startTime)
-    const b = timeToMinutes(slotDraft.endTime)
-    if (Number.isNaN(a) || Number.isNaN(b) || a >= b) {
-      setSlotFormError(lng === 'ur' ? 'درست اوقات درج کریں (اختتام شروع سے بعد میں ہو)' : 'Invalid times: end must be after start')
+    const next = validateSlotAll(slotDraft)
+    if (Object.keys(next).length) {
+      focusSlotInvalid(next)
       return
     }
     const label = slotDraft.isBreak
@@ -283,6 +353,7 @@ export default function TartibatTimetablePage() {
       sortOrder: Number(slotDraft.sortOrder) || 0,
       isActive: true,
     }
+    setSlotSaving(true)
     try {
       if (slotForm?.mode === 'edit' && slotForm.slot?._id) {
         await updateSlot({ id: slotForm.slot._id, ...payload }).unwrap()
@@ -292,7 +363,10 @@ export default function TartibatTimetablePage() {
       closeSlotForm()
       refetchSlots()
     } catch (err) {
-      setSlotFormError(err?.data?.message || err?.error || String(err))
+      const apiMsg = applySlotApiError(err)
+      setSlotFormError(apiMsg || err?.data?.message || err?.error || String(err))
+    } finally {
+      setSlotSaving(false)
     }
   }
 
@@ -650,30 +724,45 @@ export default function TartibatTimetablePage() {
               {slotFormError ? <div className="alert alert-danger py-2 small mb-2">{slotFormError}</div> : null}
               <div className="row g-2 mb-2">
                 <div className="col-6">
-                  <label className="form-label small mb-1" htmlFor="tt-slot-start">
-                    {lng === 'ur' ? 'شروع' : 'Start'}
-                  </label>
-                  <AppInput
-                    id="tt-slot-start"
-                    type="time"
-                   
+                  <FormField
+                    label={lng === 'ur' ? 'شروع' : 'Start'}
+                    htmlFor="tt-slot-start"
                     required
-                    value={slotDraft.startTime}
-                    onChange={(e) => setSlotDraft((p) => ({ ...p, startTime: e.target.value }))}
-                  />
+                    error={slotErrors.startTime}
+                  >
+                    <AppInput
+                      id="tt-slot-start"
+                      type="time"
+                      value={slotDraft.startTime}
+                      onChange={(e) => {
+                        const next = { ...slotDraft, startTime: e.target.value }
+                        setSlotDraft(next)
+                        revalidateSlotIfError('startTime', next)
+                        revalidateSlotIfError('endTime', next)
+                      }}
+                      onBlur={() => onBlurSlotField('startTime', slotDraft)}
+                    />
+                  </FormField>
                 </div>
                 <div className="col-6">
-                  <label className="form-label small mb-1" htmlFor="tt-slot-end">
-                    {lng === 'ur' ? 'اختتام' : 'End'}
-                  </label>
-                  <AppInput
-                    id="tt-slot-end"
-                    type="time"
-                   
+                  <FormField
+                    label={lng === 'ur' ? 'اختتام' : 'End'}
+                    htmlFor="tt-slot-end"
                     required
-                    value={slotDraft.endTime}
-                    onChange={(e) => setSlotDraft((p) => ({ ...p, endTime: e.target.value }))}
-                  />
+                    error={slotErrors.endTime}
+                  >
+                    <AppInput
+                      id="tt-slot-end"
+                      type="time"
+                      value={slotDraft.endTime}
+                      onChange={(e) => {
+                        const next = { ...slotDraft, endTime: e.target.value }
+                        setSlotDraft(next)
+                        revalidateSlotIfError('endTime', next)
+                      }}
+                      onBlur={() => onBlurSlotField('endTime', slotDraft)}
+                    />
+                  </FormField>
                 </div>
               </div>
               <div className="mb-2">
@@ -718,11 +807,11 @@ export default function TartibatTimetablePage() {
               </div>
             </div>
             <div className="modal-app-footer">
-              <button type="button" className="btn btn-secondary" onClick={closeSlotForm}>
+              <button type="button" className="btn btn-secondary" onClick={closeSlotForm} disabled={slotSaving}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" className="btn btn-success">
-                {t('common.save')}
+              <button type="submit" className="btn btn-success" disabled={slotSaving}>
+                {slotSaving ? t('validation.formSaving') : t('common.save')}
               </button>
             </div>
           </form>
@@ -795,11 +884,9 @@ export default function TartibatTimetablePage() {
           <form className="modal-app-form" onSubmit={saveEntryModal}>
             <div className="modal-app-body">
               {entryFormError ? <div className="alert alert-danger py-2 small mb-2">{entryFormError}</div> : null}
-              <div className="mb-2">
-                <BilingualLabel k="subjectName" htmlFor="tt-sub" />
+              <FormField k="subjectName" htmlFor="tt-sub" required className="mb-2" error={entryErrors.subjectId}>
                 <AppSelect
                   id="tt-sub"
-                 
                   value={mf.subjectId}
                   onChange={(e) => {
                     const v = e.target.value
@@ -813,9 +900,13 @@ export default function TartibatTimetablePage() {
                         darjahId = ''
                         bookId = ''
                       }
-                      return { ...prev, subjectId: v, darjahId, bookId: v !== prev.subjectId ? '' : bookId }
+                      const next = { ...prev, subjectId: v, darjahId, bookId: v !== prev.subjectId ? '' : bookId }
+                      revalidateEntryIfError('subjectId', next)
+                      revalidateEntryIfError('darjahId', next)
+                      return next
                     })
                   }}
+                  onBlur={() => onBlurEntryField('subjectId', mf)}
                 >
                   <option value="">—</option>
                   {subjectPickList.map((s) => (
@@ -824,15 +915,17 @@ export default function TartibatTimetablePage() {
                     </option>
                   ))}
                 </AppSelect>
-              </div>
-              <div className="mb-2">
-                <BilingualLabel k="darjahName" htmlFor="tt-dj" />
+              </FormField>
+              <FormField k="darjahName" htmlFor="tt-dj" required className="mb-2" error={entryErrors.darjahId}>
                 <AppSelect
                   id="tt-dj"
-                 
-                  required
                   value={mf.darjahId}
-                  onChange={(e) => setMf({ ...mf, darjahId: e.target.value, bookId: '' })}
+                  onChange={(e) => {
+                    const next = { ...mf, darjahId: e.target.value, bookId: '' }
+                    setMf(next)
+                    revalidateEntryIfError('darjahId', next)
+                  }}
+                  onBlur={() => onBlurEntryField('darjahId', mf)}
                   disabled={!mf.subjectId}
                 >
                   <option value="">—</option>
@@ -842,14 +935,23 @@ export default function TartibatTimetablePage() {
                     </option>
                   ))}
                 </AppSelect>
-              </div>
-              <div className="mb-2">
-                <label className="form-label small mb-1">{lng === 'ur' ? 'دن' : 'Day'}</label>
+              </FormField>
+              <FormField
+                label={lng === 'ur' ? 'دن' : 'Day'}
+                htmlFor="tt-day"
+                required
+                className="mb-2"
+                error={entryErrors.day}
+              >
                 <AppSelect
-                 
+                  id="tt-day"
                   value={mf.day}
-                  onChange={(e) => setMf({ ...mf, day: e.target.value })}
-                  required
+                  onChange={(e) => {
+                    const next = { ...mf, day: e.target.value }
+                    setMf(next)
+                    revalidateEntryIfError('day', next)
+                  }}
+                  onBlur={() => onBlurEntryField('day', mf)}
                 >
                   {DAYS.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -857,14 +959,23 @@ export default function TartibatTimetablePage() {
                     </option>
                   ))}
                 </AppSelect>
-              </div>
-              <div className="mb-2">
-                <label className="form-label small mb-1">{lng === 'ur' ? 'پیریڈ' : 'Period'}</label>
+              </FormField>
+              <FormField
+                label={lng === 'ur' ? 'پیریڈ' : 'Period'}
+                htmlFor="tt-slot"
+                required
+                className="mb-2"
+                error={entryErrors.slotId}
+              >
                 <AppSelect
-                 
-                  required
+                  id="tt-slot"
                   value={mf.slotId}
-                  onChange={(e) => setMf({ ...mf, slotId: e.target.value })}
+                  onChange={(e) => {
+                    const next = { ...mf, slotId: e.target.value }
+                    setMf(next)
+                    revalidateEntryIfError('slotId', next)
+                  }}
+                  onBlur={() => onBlurEntryField('slotId', mf)}
                 >
                   <option value="">—</option>
                   {sortedSlots
@@ -875,15 +986,17 @@ export default function TartibatTimetablePage() {
                       </option>
                     ))}
                 </AppSelect>
-              </div>
-              <div className="mb-2">
-                <BilingualLabel k="teacher" htmlFor="tt-teach" />
+              </FormField>
+              <FormField k="teacher" htmlFor="tt-teach" required className="mb-2" error={entryErrors.teacherId}>
                 <AppSelect
                   id="tt-teach"
-                 
-                  required
                   value={mf.teacherId}
-                  onChange={(e) => setMf({ ...mf, teacherId: e.target.value })}
+                  onChange={(e) => {
+                    const next = { ...mf, teacherId: e.target.value }
+                    setMf(next)
+                    revalidateEntryIfError('teacherId', next)
+                  }}
+                  onBlur={() => onBlurEntryField('teacherId', mf)}
                 >
                   <option value="">—</option>
                   {teachers.map((te) => (
@@ -892,12 +1005,10 @@ export default function TartibatTimetablePage() {
                     </option>
                   ))}
                 </AppSelect>
-              </div>
-              <div className="mb-2">
-                <BilingualLabel k="bookTitle" htmlFor="tt-book" />
+              </FormField>
+              <FormField k="bookTitle" htmlFor="tt-book" className="mb-2">
                 <AppSelect
                   id="tt-book"
-                 
                   value={mf.bookId}
                   onChange={(e) => setMf({ ...mf, bookId: e.target.value })}
                   disabled={!mf.subjectId || !mf.darjahId}
@@ -909,25 +1020,27 @@ export default function TartibatTimetablePage() {
                     </option>
                   ))}
                 </AppSelect>
-              </div>
-              <div className="mb-0">
-                <label className="form-label small mb-1">{lng === 'ur' ? 'کمرہ (اختیاری)' : 'Room (optional)'}</label>
+              </FormField>
+              <FormField
+                label={lng === 'ur' ? 'کمرہ (اختیاری)' : 'Room (optional)'}
+                htmlFor="tt-room"
+                className="mb-0"
+              >
                 <AppInput
                   id="tt-room"
-                 
                   placeholder={lng === 'ur' ? 'مثلاً کمرہ 1' : 'e.g. Room 1'}
                   value={mf.room}
                   latin
-                    onChange={(e) => setMf({ ...mf, room: e.target.value })}
+                  onChange={(e) => setMf({ ...mf, room: e.target.value })}
                 />
-              </div>
+              </FormField>
             </div>
             <div className="modal-app-footer">
-              <button type="button" className="btn btn-secondary" onClick={closeEntryModal}>
+              <button type="button" className="btn btn-secondary" onClick={closeEntryModal} disabled={entrySaving}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" className="btn btn-success">
-                {t('common.save')}
+              <button type="submit" className="btn btn-success" disabled={entrySaving}>
+                {entrySaving ? t('validation.formSaving') : t('common.save')}
               </button>
             </div>
           </form>

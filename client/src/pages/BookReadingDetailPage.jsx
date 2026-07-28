@@ -18,6 +18,7 @@ import ReadingTimeline from '../components/bookReading/ReadingTimeline'
 import ReadingRecordForm from '../components/bookReading/ReadingRecordForm'
 import { AppSelect } from '../components/ui'
 import FilterDrawer, { FilterToolbar } from '../components/FilterDrawer'
+import { useFormValidation, readingRecordSchema } from '../shared/validation'
 import './bookReading.css'
 
 const emptyForm = () => ({
@@ -62,6 +63,21 @@ export default function BookReadingDetailPage() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm())
   const [msg, setMsg] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const {
+    errors: recordErrors,
+    onBlurField: onBlurRecord,
+    revalidateIfError: revalidateRecord,
+    validateAll: validateRecordAll,
+    focusInvalid: focusInvalidRecord,
+    setErrors: setRecordErrors,
+  } = useFormValidation({
+    schema: readingRecordSchema,
+    t,
+    fieldIds: { readingDate: 'rr-date', startPage: 'rr-start', endPage: 'rr-end' },
+    order: ['readingDate', 'startPage', 'endPage'],
+  })
 
   const { data: book, isLoading: bookLoading, refetch: refetchBook } = useGetBookWithReadingProgressQuery(bookId, {
     skip: !bookId,
@@ -117,6 +133,7 @@ export default function BookReadingDetailPage() {
     setEditing(null)
     const suggested = book.progress?.currentPage ? String(book.progress.currentPage + 1) : '1'
     setForm({ ...emptyForm(), startPage: suggested, endPage: suggested })
+    setRecordErrors({})
     setModal(true)
   }
 
@@ -130,9 +147,10 @@ export default function BookReadingDetailPage() {
     setEditing(null)
     const suggested = book.progress?.currentPage ? String(book.progress.currentPage + 1) : '1'
     setForm({ ...emptyForm(), startPage: suggested, endPage: suggested })
+    setRecordErrors({})
     setModal(true)
     setSearchParams({}, { replace: true })
-  }, [book, searchParams, setSearchParams, t])
+  }, [book, searchParams, setSearchParams, t, setRecordErrors])
 
   useEffect(() => {
     tryOpenAddFromUrl()
@@ -147,12 +165,15 @@ export default function BookReadingDetailPage() {
       durationMinutes: row.durationMinutes ?? '',
       notes: row.notes || '',
     })
+    setRecordErrors({})
     setModal(true)
   }
 
   async function handleSave() {
-    if (!bookId || !form.readingDate || form.startPage === '') {
-      flash(t('bookReading.requiredFields'))
+    if (!bookId) return
+    const nextErrors = validateRecordAll(form)
+    if (Object.keys(nextErrors).length) {
+      focusInvalidRecord(nextErrors)
       return
     }
     const payload = {
@@ -163,6 +184,7 @@ export default function BookReadingDetailPage() {
       durationMinutes: form.durationMinutes !== '' ? Number(form.durationMinutes) : undefined,
       notes: form.notes.trim(),
     }
+    setSaving(true)
     try {
       if (editing) {
         await updateRecord({ id: editing._id, ...payload }).unwrap()
@@ -176,6 +198,8 @@ export default function BookReadingDetailPage() {
       refetchBook()
     } catch (e) {
       flash(e?.data?.message || e.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -374,17 +398,24 @@ export default function BookReadingDetailPage() {
         onClose={() => setModal(false)}
         footer={
           <>
-            <button type="button" className="btn btn-outline-secondary" onClick={() => setModal(false)}>
+            <button type="button" className="btn btn-outline-secondary" onClick={() => setModal(false)} disabled={saving}>
               {t('common.cancel')}
             </button>
-            <button type="button" className="btn btn-primary" onClick={handleSave}>
-              {t('common.save')}
+            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
+              {saving ? t('common.loading') : t('common.save')}
             </button>
           </>
         }
       >
         <div className="modal-app-body modal-app-body--reading">
-          <ReadingRecordForm form={form} setForm={setForm} totalPages={book.totalPages} />
+          <ReadingRecordForm
+            form={form}
+            setForm={setForm}
+            totalPages={book.totalPages}
+            errors={recordErrors}
+            onFieldBlur={(name, values) => onBlurRecord(name, values)}
+            onFieldChange={(name, values) => revalidateRecord(name, values)}
+          />
         </div>
       </AppModalShell>
 

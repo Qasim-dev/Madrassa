@@ -16,10 +16,13 @@ import AppDateInput from '../components/AppDateInput'
 import AppModalShell from '../components/AppModalShell'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import DataTable from '../components/DataTable'
-import { AppInput, AppSelect, AppTextarea, AppFileInput } from '../components/ui'
+import { AppInput, AppSelect, AppTextarea, AppFileInput, FormField } from '../components/ui'
 import PageHeading from '../components/PageHeading'
+import { useFormValidation } from '../shared/validation'
+import { speechFormSchema } from '../shared/validation/formSchemas'
 
 const emptyLoc = () => ({ ur: '', en: '' })
+const FIELD_IDS = { 'title.ur': 'sp-title-ur' }
 
 function emptyForm() {
   return {
@@ -66,6 +69,21 @@ export default function SpeechesPage() {
   const [removePdf, setRemovePdf] = useState(false)
   const [removeAudio, setRemoveAudio] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const {
+    errors: fieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+    setErrors,
+  } = useFormValidation({
+    schema: speechFormSchema,
+    t,
+    fieldIds: FIELD_IDS,
+    order: ['title.ur'],
+  })
 
   const queryParams = {
     ...(activeSessionId ? { sessionId: activeSessionId } : {}),
@@ -86,6 +104,7 @@ export default function SpeechesPage() {
     setAudioFile(null)
     setRemovePdf(false)
     setRemoveAudio(false)
+    setErrors({})
     setModal(true)
   }
 
@@ -104,25 +123,36 @@ export default function SpeechesPage() {
     setAudioFile(null)
     setRemovePdf(false)
     setRemoveAudio(false)
+    setErrors({})
     setModal(true)
   }
 
   async function save(e) {
     e.preventDefault()
-    const fd = buildSpeechFormData(form, {
-      pdfFile,
-      audioFile,
-      editing: !!editing,
-      removePdf,
-      removeAudio,
-    })
-    if (activeSessionId) fd.append('sessionId', activeSessionId)
+    const next = validateAll(form)
+    if (Object.keys(next).length) {
+      focusInvalid(next)
+      return
+    }
+    setSaving(true)
+    try {
+      const fd = buildSpeechFormData(form, {
+        pdfFile,
+        audioFile,
+        editing: !!editing,
+        removePdf,
+        removeAudio,
+      })
+      if (activeSessionId) fd.append('sessionId', activeSessionId)
 
-    if (editing) await updateSpeech({ id: editing._id, body: fd }).unwrap()
-    else await createSpeech(fd).unwrap()
+      if (editing) await updateSpeech({ id: editing._id, body: fd }).unwrap()
+      else await createSpeech(fd).unwrap()
 
-    setModal(false)
-    refetch()
+      setModal(false)
+      refetch()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const columns = useMemo(
@@ -234,26 +264,40 @@ export default function SpeechesPage() {
           <form className="modal-app-form" onSubmit={save}>
             <div className="modal-app-body">
               <div className="row g-3">
-                <div className="col-12 col-md-4" data-lang-field="ur">
-                  <BilingualLabel k="speechTitleUr" htmlFor="sp-title-ur" required />
-                  <AppInput
-                    id="sp-title-ur"
-                   
-                    dir="rtl"
-                    value={form.title.ur}
-                    onChange={(e) => setForm({ ...form, title: { ...form.title, ur: e.target.value } })}
+                <div className="col-12 col-md-4">
+                  <FormField
+                    k="speechTitleUr"
+                    htmlFor="sp-title-ur"
                     required
-                  />
+                    langField="ur"
+                    error={fieldErrors['title.ur']}
+                  >
+                    <AppInput
+                      id="sp-title-ur"
+                      dir="rtl"
+                      value={form.title.ur}
+                      onChange={(e) => {
+                        const next = { ...form, title: { ...form.title, ur: e.target.value } }
+                        setForm(next)
+                        revalidateIfError('title.ur', next)
+                      }}
+                      onBlur={() => onBlurField('title.ur', form)}
+                    />
+                  </FormField>
                 </div>
-                <div className="col-12 col-md-4" data-lang-field="en">
-                  <BilingualLabel k="speechTitleEn" htmlFor="sp-title-en" />
-                  <AppInput
-                    id="sp-title-en"
-                   
-                    value={form.title.en}
-                    latin
-                    onChange={(e) => setForm({ ...form, title: { ...form.title, en: e.target.value } })}
-                  />
+                <div className="col-12 col-md-4">
+                  <FormField k="speechTitleEn" htmlFor="sp-title-en" langField="en">
+                    <AppInput
+                      id="sp-title-en"
+                      value={form.title.en}
+                      latin
+                      onChange={(e) => {
+                        const next = { ...form, title: { ...form.title, en: e.target.value } }
+                        setForm(next)
+                        revalidateIfError('title.ur', next)
+                      }}
+                    />
+                  </FormField>
                 </div>
                 <div className="col-12 col-md-4" data-lang-field="ur">
                   <BilingualLabel k="speechSpeakerUr" htmlFor="sp-sp-ur" />
@@ -387,11 +431,11 @@ export default function SpeechesPage() {
               </div>
             </div>
             <div className="modal-app-footer">
-              <button type="button" className="btn btn-secondary" onClick={() => setModal(false)}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModal(false)} disabled={saving}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" className="btn btn-success">
-                {t('common.save')}
+              <button type="submit" className="btn btn-success" disabled={saving}>
+                {saving ? t('validation.formSaving') : t('common.save')}
               </button>
             </div>
           </form>

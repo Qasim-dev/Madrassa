@@ -4,12 +4,14 @@ import { useTranslation } from 'react-i18next'
 import ConfirmActionModal from '../components/ConfirmActionModal'
 import { useFlash } from '../app/flash.jsx'
 import { useUnsavedChangesGuard } from '../shared/useUnsavedChangesGuard'
+import { formatCnicDisplay, trimFormStrings } from '../shared/pkValidation'
 import {
-  formatCnicDisplay,
-  isValidCnic,
-  isValidPhone,
-  trimFormStrings,
-} from '../shared/pkValidation'
+  useFormValidation,
+  compose,
+  cnic,
+  phone,
+  notFutureDate,
+} from '../shared/validation'
 import {
   useGetTeacherQuery,
   useCreateTeacherMutation,
@@ -39,6 +41,25 @@ import { toInputDate } from '../shared/formatDisplayDate'
 import TeacherSalaryPanel from '../components/TeacherSalaryPanel'
 
 const emptyLoc = () => ({ ur: '', en: '' })
+
+const TEACHER_FIELD_IDS = {
+  'name.ur': 't-name-ur',
+  phone: 't-phone',
+  idCard: 't-id',
+  dateOfBirth: 't-dob',
+}
+
+const teacherSchema = {
+  'name.ur': (_value, values, t) => {
+    const ur = String(values?.name?.ur || '').trim()
+    const en = String(values?.name?.en || '').trim()
+    if (!ur && !en) return t('validation.teacherNameRequired')
+    return ''
+  },
+  phone: compose(phone()),
+  idCard: compose(cnic()),
+  dateOfBirth: compose(notFutureDate()),
+}
 
 function refId(v) {
   if (v == null || v === '') return null
@@ -99,10 +120,34 @@ export default function TeacherFormPage() {
   const [form, setFormState] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
-  const setForm = useCallback((next) => {
-    setDirty(true)
-    setFormState(next)
-  }, [])
+  const {
+    errors: fieldErrors,
+    revalidateIfError,
+    onBlurField,
+    validateAll,
+    focusInvalid,
+    applyApiError,
+  } = useFormValidation({
+    schema: teacherSchema,
+    t,
+    fieldIds: TEACHER_FIELD_IDS,
+    order: ['name.ur', 'phone', 'idCard', 'dateOfBirth'],
+  })
+  const setForm = useCallback(
+    (next) => {
+      setDirty(true)
+      setFormState((prev) => {
+        const resolved = typeof next === 'function' ? next(prev) : next
+        queueMicrotask(() => {
+          for (const key of Object.keys(TEACHER_FIELD_IDS)) {
+            revalidateIfError(key, resolved)
+          }
+        })
+        return resolved
+      })
+    },
+    [revalidateIfError]
+  )
   const { isBlocked, proceed, reset } = useUnsavedChangesGuard(dirty && !saving)
 
   const { data: sessions = [] } = useGetSessionsQuery()
@@ -295,12 +340,10 @@ export default function TeacherFormPage() {
   async function save(e) {
     e.preventDefault()
     const trimmed = trimFormStrings(form)
-    if (!isValidCnic(trimmed.idCard)) {
-      showFlash(t('validation.invalidCnic'))
-      return
-    }
-    if (!isValidPhone(trimmed.phone)) {
-      showFlash(t('validation.invalidPhone'))
+    const nextErrors = validateAll(trimmed)
+    if (Object.keys(nextErrors).length) {
+      setTab('basic')
+      requestAnimationFrame(() => focusInvalid(nextErrors))
       return
     }
     setSaving(true)
@@ -316,7 +359,8 @@ export default function TeacherFormPage() {
       setDirty(false)
       navigate('/teachers')
     } catch (err) {
-      showFlash(err?.data?.message || err?.error || err?.message || t('common.error'))
+      const apiMsg = applyApiError(err)
+      showFlash(apiMsg || err?.data?.message || err?.error || err?.message || t('common.error'))
     } finally {
       setSaving(false)
     }
@@ -365,12 +409,21 @@ export default function TeacherFormPage() {
 
           {tab === 'basic' && (
             <FormRow>
-              <FormField k="teacherNameUr" htmlFor="t-name-ur" col={4} required langField="ur">
+              <FormField
+                k="teacherNameUr"
+                htmlFor="t-name-ur"
+                col={4}
+                required
+                langField="ur"
+                error={fieldErrors['name.ur']}
+              >
                 <AppInput
                   id="t-name-ur"
                   data-lang-field="ur"
+                  data-field="name.ur"
                   value={form.name?.ur || ''}
                   onChange={(e) => setForm({ ...form, name: { ...(form.name || emptyLoc()), ur: e.target.value } })}
+                  onBlur={() => onBlurField('name.ur', form)}
                   dir="rtl"
                 />
               </FormField>
@@ -396,20 +449,23 @@ export default function TeacherFormPage() {
                   dir={lng === 'ur' ? 'rtl' : undefined}
                 />
               </FormField>
-              <FormField k="idCard" htmlFor="t-id" col={4}>
+              <FormField k="idCard" htmlFor="t-id" col={4} error={fieldErrors.idCard}>
                 <AppInput
                   id="t-id"
                   latin
+                  data-field="idCard"
                   value={form.idCard || ''}
                   onChange={(e) => setForm({ ...form, idCard: e.target.value })}
+                  onBlur={() => onBlurField('idCard', form)}
                 />
               </FormField>
-              <FormField k="dateOfBirth" htmlFor="t-dob" col={4}>
+              <FormField k="dateOfBirth" htmlFor="t-dob" col={4} error={fieldErrors.dateOfBirth}>
                 <AppDateInput
                   id="t-dob"
                   lng={lng}
                   value={form.dateOfBirth || ''}
                   onChange={(v) => setForm({ ...form, dateOfBirth: v })}
+                  onBlur={() => onBlurField('dateOfBirth', form)}
                   emptyCalendarYear={1990}
                 />
               </FormField>
@@ -426,12 +482,14 @@ export default function TeacherFormPage() {
                   <option value="divorced">{lng === 'ur' ? 'طلاق یافتہ' : 'Divorced'}</option>
                 </AppSelect>
               </FormField>
-              <FormField k="phone" htmlFor="t-phone" col={4}>
+              <FormField k="phone" htmlFor="t-phone" col={4} error={fieldErrors.phone}>
                 <AppInput
                   id="t-phone"
                   latin
+                  data-field="phone"
                   value={form.phone || ''}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onBlur={() => onBlurField('phone', form)}
                 />
               </FormField>
               <div className="app-form-col app-form-col--12 mt-2">
@@ -777,7 +835,7 @@ export default function TeacherFormPage() {
             {flText(FL.cancel, lng)}
           </button>
           <button type="submit" className="btn btn-success" disabled={saving} lang={lang}>
-            {flText(FL.save, lng)}
+            {saving ? t('validation.formSaving') : flText(FL.save, lng)}
           </button>
         </div>
       </form>

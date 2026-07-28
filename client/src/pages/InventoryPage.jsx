@@ -37,6 +37,8 @@ import { INV_CATEGORIES, INV_UNITS } from '../shared/inventoryEnums.js'
 import { EXPENSE_CATEGORIES, FUND_SOURCES } from '../shared/financeEnums.js'
 import { AppInput, AppSelect, AppTextarea, AppCheckbox, AppButton, FormField, FormRow, AppKpiCards, AppFileInput } from '../components/ui'
 import FilterDrawer, { FilterToolbar } from '../components/FilterDrawer'
+import { useFormValidation } from '../shared/validation'
+import { inventoryItemSchema } from '../shared/validation/formSchemas'
 import './inventoryDashboard.css'
 
 const CHART_COL = ['#0f8f5f', '#12a873', '#26ba99', '#5eead4', '#0b6e49', '#99f6e4', '#075c3b', '#d1fae5']
@@ -226,6 +228,19 @@ export default function InventoryPage() {
   const [itemForm, setItemForm] = useState(emptyItemForm)
   const [receiptFile, setReceiptFile] = useState(null)
 
+  const {
+    errors: itemErrors,
+    setErrors: setItemErrors,
+    onBlurField: onBlurItem,
+    revalidateIfError: revalidateItem,
+    validateAll: validateItemAll,
+    focusInvalid: focusInvalidItem,
+  } = useFormValidation({
+    schema: inventoryItemSchema,
+    t,
+    fieldIds: { 'name.ur': 'it-nu' },
+  })
+
   const [movForm, setMovForm] = useState(emptyMovForm)
 
   const [itemModalOpen, setItemModalOpen] = useState(false)
@@ -309,19 +324,22 @@ export default function InventoryPage() {
   const clearItemForm = useCallback(() => {
     setItemForm(emptyItemForm())
     setReceiptFile(null)
-  }, [])
+    setItemErrors({})
+  }, [setItemErrors])
 
   const closeItemModal = useCallback(() => {
     setItemModalOpen(false)
     setItemForm(emptyItemForm())
     setReceiptFile(null)
-  }, [])
+    setItemErrors({})
+  }, [setItemErrors])
 
   const openAddItemModal = useCallback(() => {
     setItemForm(emptyItemForm())
     setReceiptFile(null)
+    setItemErrors({})
     setItemModalOpen(true)
-  }, [])
+  }, [setItemErrors])
 
   function startEdit(it) {
     setItemForm({
@@ -340,13 +358,15 @@ export default function InventoryPage() {
       notes: it.notes || '',
     })
     setReceiptFile(null)
+    setItemErrors({})
     setItemModalOpen(true)
   }
 
   async function submitItem(e) {
     e.preventDefault()
-    if (!itemForm.name.ur && !itemForm.name.en) {
-      showFlash(t('inventory.validationName'))
+    const nextErrors = validateItemAll(itemForm)
+    if (Object.keys(nextErrors).length) {
+      focusInvalidItem(nextErrors)
       return
     }
     const qty = Number(itemForm.quantity) || 0
@@ -1156,13 +1176,31 @@ export default function InventoryPage() {
             <div className="modal-app-body">
               <div className="row g-3">
                 <div className="col-12 col-md-4">
-                  <FormField k="nameUrField" htmlFor="it-nu" langField="ur">
-                    <AppInput id="it-nu" value={itemForm.name.ur} onChange={(e) => setItemForm({ ...itemForm, name: { ...itemForm.name, ur: e.target.value } })} />
+                  <FormField k="nameUrField" htmlFor="it-nu" langField="ur" error={itemErrors['name.ur']}>
+                    <AppInput
+                      id="it-nu"
+                      value={itemForm.name.ur}
+                      onChange={(e) => {
+                        const next = { ...itemForm, name: { ...itemForm.name, ur: e.target.value } }
+                        setItemForm(next)
+                        revalidateItem('name.ur', next)
+                      }}
+                      onBlur={() => onBlurItem('name.ur', itemForm)}
+                    />
                   </FormField>
                 </div>
                 <div className="col-12 col-md-4">
                   <FormField k="nameEnField" htmlFor="it-ne" langField="en">
-                    <AppInput id="it-ne" value={itemForm.name.en} onChange={(e) => setItemForm({ ...itemForm, name: { ...itemForm.name, en: e.target.value } })} />
+                    <AppInput
+                      id="it-ne"
+                      value={itemForm.name.en}
+                      onChange={(e) => {
+                        const next = { ...itemForm, name: { ...itemForm.name, en: e.target.value } }
+                        setItemForm(next)
+                        revalidateItem('name.ur', next)
+                      }}
+                      onBlur={() => onBlurItem('name.ur', itemForm)}
+                    />
                   </FormField>
                 </div>
                 <div className="col-12 col-md-4">

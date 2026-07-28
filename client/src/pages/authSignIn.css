@@ -381,6 +381,28 @@
   margin-bottom: 0.4rem;
 }
 
+.auth-signin__field--error label {
+  color: #fca5a5;
+}
+
+.auth-signin__field--error .auth-signin__input {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
+}
+
+.auth-signin__field-msg {
+  min-height: 1.1rem;
+  margin-top: 0.35rem;
+}
+
+.auth-signin__field-error {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fecaca;
+  line-height: 1.4;
+}
+
 .auth-signin__input-wrap {
   position: relative;
   display: flex;

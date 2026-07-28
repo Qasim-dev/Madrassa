@@ -23,6 +23,8 @@ import PageHeading from '../components/PageHeading'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import AppModalShell from '../components/AppModalShell'
 import { AppInput, AppSelect, FormField, FormRow } from '../components/ui'
+import { useFormValidation } from '../shared/validation'
+import { feeItemSchema, feeCollectSchema } from '../shared/validation/formSchemas'
 
 const FREQ = [
   { id: 'monthly', ur: 'ماہانہ', en: 'Monthly' },
@@ -31,6 +33,34 @@ const FREQ = [
 ]
 
 const HOWTO_DISMISS_KEY = 'fees-howto-dismissed'
+
+const ADJUST_FIELD_IDS = {
+  maafi: { amount: 'fee-maafi-amt', reason: 'fee-maafi-reason' },
+  balance: { amount: 'fee-bal-amt', reason: 'fee-bal-reason' },
+}
+
+const adjustSchema = {
+  amount: (value, values, t) => {
+    if (values.mode !== 'maafi') return ''
+    const amt = Number(value)
+    if (value === '' || value == null || !Number.isFinite(amt) || amt <= 0) {
+      return t('finance.validationAmount')
+    }
+    const due = Number(values.due) || 0
+    if (due <= 0) return t('fees.maafiNoDue')
+    if (amt > due + 0.001) return t('fees.maafiExceedsDue', { due })
+    return ''
+  },
+  reason: (value, values, t) => {
+    if (values.mode !== 'maafi' && values.mode !== 'balance') return ''
+    return String(value || '').trim().length < 3 ? t('fees.reasonRequired') : ''
+  },
+}
+
+const deleteBalanceSchema = {
+  reason: (value, _values, t) =>
+    String(value || '').trim().length < 5 ? t('fees.deleteBalanceReasonShort') : '',
+}
 
 export default function FeesPage() {
   const { t, i18n } = useTranslation()
@@ -110,6 +140,61 @@ export default function FeesPage() {
   const [msg, setMsg] = useState('')
   const [msgTone, setMsgTone] = useState('success')
 
+  const {
+    errors: addItemErrors,
+    setErrors: setAddItemErrors,
+    onBlurField: onBlurAddItem,
+    revalidateIfError: revalidateAddItem,
+    validateAll: validateAddItemAll,
+    focusInvalid: focusInvalidAddItem,
+  } = useFormValidation({
+    schema: feeItemSchema,
+    t,
+    fieldIds: { 'title.ur': 'fee-tu', amount: 'fee-amt' },
+    order: ['title.ur', 'amount'],
+  })
+
+  const {
+    errors: collectErrors,
+    setErrors: setCollectErrors,
+    onBlurField: onBlurCollect,
+    revalidateIfError: revalidateCollect,
+    validateAll: validateCollectAll,
+    focusInvalid: focusInvalidCollect,
+  } = useFormValidation({
+    schema: feeCollectSchema,
+    t,
+    fieldIds: { amount: 'fee-collect-amt', accountId: 'fee-collect-acc' },
+    order: ['amount', 'accountId'],
+  })
+
+  const adjustFieldIds = ADJUST_FIELD_IDS[adjustMode] || {}
+  const {
+    errors: adjustErrors,
+    setErrors: setAdjustErrors,
+    revalidateIfError: revalidateAdjust,
+    validateAll: validateAdjustAll,
+    focusInvalid: focusInvalidAdjust,
+  } = useFormValidation({
+    schema: adjustSchema,
+    t,
+    fieldIds: adjustFieldIds,
+    order: ['amount', 'reason'],
+  })
+
+  const {
+    errors: deleteBalanceErrors,
+    setErrors: setDeleteBalanceErrors,
+    onBlurField: onBlurDeleteBalance,
+    revalidateIfError: revalidateDeleteBalance,
+    validateAll: validateDeleteBalanceAll,
+    focusInvalid: focusInvalidDeleteBalance,
+  } = useFormValidation({
+    schema: deleteBalanceSchema,
+    t,
+    fieldIds: { reason: 'delete-balance-reason' },
+  })
+
   function dismissHowto() {
     setHowtoOpen(false)
     try {
@@ -139,6 +224,7 @@ export default function FeesPage() {
     else if (mode === 'balance') setAdjustAmount(String(Math.min(credit, due) || ''))
     else setAdjustAmount('')
     setAdjustReason('')
+    setAdjustErrors({})
   }
 
   async function handleApply(it) {
@@ -241,6 +327,7 @@ export default function FeesPage() {
                   setCollectMonth(new Date().toISOString().slice(0, 7))
                   setCollectAccountId(financeAccounts[0]?._id ? String(financeAccounts[0]._id) : '')
                   setCollectMethod('cash')
+                  setCollectErrors({})
                 }}
               >
                 {t('fees.collectButton')}
@@ -251,6 +338,7 @@ export default function FeesPage() {
               className="btn btn-sm btn-outline-danger"
               onClick={() => {
                 setDeleteBalanceReason('')
+                setDeleteBalanceErrors({})
                 setDeleteBalanceTarget(b)
               }}
             >
@@ -260,7 +348,7 @@ export default function FeesPage() {
         ),
       },
     ],
-    [lng, t, financeAccounts]
+    [lng, t, financeAccounts, setCollectErrors, setDeleteBalanceErrors]
   )
 
   const itemColumns = useMemo(
@@ -318,8 +406,9 @@ export default function FeesPage() {
       flash(t('fees.classRequired'), 'warning')
       return
     }
-    if (!title.ur?.trim() && !title.en?.trim()) {
-      flash(t('common.error'), 'danger')
+    const nextErrors = validateAddItemAll({ title, amount })
+    if (Object.keys(nextErrors).length) {
+      focusInvalidAddItem(nextErrors)
       return
     }
     try {
@@ -335,6 +424,7 @@ export default function FeesPage() {
       setAmount('')
       setDarjahId('')
       setFrequency('monthly')
+      setAddItemErrors({})
       refetch()
       flash(t('fees.afterAddHint'), 'warning')
     } catch (err) {
@@ -345,19 +435,17 @@ export default function FeesPage() {
   async function submitCollect(e) {
     e.preventDefault()
     if (!collectOpen) return
-    const amt = Number(collectAmount)
-    if (!Number.isFinite(amt) || amt <= 0) {
-      flash(t('finance.validationAmount'), 'danger')
+    const acc = collectAccountId || financeAccounts[0]?._id
+    const values = { amount: collectAmount, accountId: acc ? String(acc) : '' }
+    const nextErrors = validateCollectAll(values)
+    if (Object.keys(nextErrors).length) {
+      focusInvalidCollect(nextErrors)
       return
     }
+    const amt = Number(collectAmount)
     const due = Number(collectOpen.due) || 0
     if (amt > due + 0.001) {
       flash(t('fees.amountExceedsDue'), 'danger')
-      return
-    }
-    const acc = collectAccountId || financeAccounts[0]?._id
-    if (!acc) {
-      flash(t('fees.collectNeedAccount'), 'warning')
       return
     }
     try {
@@ -373,6 +461,7 @@ export default function FeesPage() {
         },
       }).unwrap()
       setCollectOpen(null)
+      setCollectErrors({})
       refetchBalances()
       refetchAudit()
       flash(t('fees.collected'))
@@ -386,32 +475,21 @@ export default function FeesPage() {
     if (!adjustOpen) return
 
     if (adjustMode === 'maafi') {
-      const amt = Number(adjustAmount)
       const dueNow = Number(adjustOpen.due) || 0
-      if (!Number.isFinite(amt) || amt <= 0) {
-        flash(t('finance.validationAmount'), 'danger')
-        return
-      }
-      if (dueNow <= 0) {
-        flash(t('fees.maafiNoDue'), 'warning')
-        return
-      }
-      if (amt > dueNow + 0.001) {
-        flash(t('fees.maafiExceedsDue', { due: dueNow }), 'danger')
-        return
-      }
-      if (adjustReason.trim().length < 3) {
-        flash(t('fees.reasonRequired'), 'warning')
+      const nextErrors = validateAdjustAll({ mode: 'maafi', amount: adjustAmount, reason: adjustReason, due: dueNow })
+      if (Object.keys(nextErrors).length) {
+        focusInvalidAdjust(nextErrors)
         return
       }
       try {
         await applyMaafi({
           id: adjustOpen._id,
-          amount: amt,
+          amount: Number(adjustAmount),
           reason: adjustReason.trim(),
           ...(activeSessionId ? { sessionId: activeSessionId } : {}),
         }).unwrap()
         setAdjustOpen(null)
+        setAdjustErrors({})
         refetchBalances()
         refetchAudit()
         flash(t('fees.maafiDone'))
@@ -422,8 +500,14 @@ export default function FeesPage() {
     }
 
     if (adjustMode === 'balance') {
-      if (adjustReason.trim().length < 3) {
-        flash(t('fees.reasonRequired'), 'warning')
+      const nextErrors = validateAdjustAll({
+        mode: 'balance',
+        amount: adjustAmount,
+        reason: adjustReason,
+        due: Number(adjustOpen.due) || 0,
+      })
+      if (Object.keys(nextErrors).length) {
+        focusInvalidAdjust(nextErrors)
         return
       }
       try {
@@ -434,6 +518,7 @@ export default function FeesPage() {
           ...(activeSessionId ? { sessionId: activeSessionId } : {}),
         }).unwrap()
         setAdjustOpen(null)
+        setAdjustErrors({})
         refetchBalances()
         refetchAudit()
         flash(t('fees.applyBalanceDone'))
@@ -466,8 +551,9 @@ export default function FeesPage() {
     e.preventDefault()
     if (!deleteBalanceTarget?._id) return
     const reason = deleteBalanceReason.trim()
-    if (reason.length < 5) {
-      flash(t('fees.deleteBalanceReasonShort'), 'warning')
+    const nextErrors = validateDeleteBalanceAll({ reason })
+    if (Object.keys(nextErrors).length) {
+      focusInvalidDeleteBalance(nextErrors)
       return
     }
     try {
@@ -478,6 +564,7 @@ export default function FeesPage() {
       }).unwrap()
       setDeleteBalanceTarget(null)
       setDeleteBalanceReason('')
+      setDeleteBalanceErrors({})
       flash(t('fees.deleteBalanceDone'))
       refetchBalances()
       refetchAudit()
@@ -578,12 +665,16 @@ export default function FeesPage() {
           style={{ background: 'transparent', border: 'none', padding: 0, margin: 0 }}
         >
           <div className="exam-toolbar__field" data-lang-field="ur">
-            <FormField k="feeTitleUr" htmlFor="fee-tu" langField="ur">
+            <FormField k="feeTitleUr" htmlFor="fee-tu" langField="ur" error={addItemErrors['title.ur']}>
               <AppInput
                 id="fee-tu"
                 value={title.ur}
-                onChange={(e) => setTitle({ ...title, ur: e.target.value })}
-                required
+                onChange={(e) => {
+                  const next = { ...title, ur: e.target.value }
+                  setTitle(next)
+                  revalidateAddItem('title.ur', { title: next, amount })
+                }}
+                onBlur={() => onBlurAddItem('title.ur', { title, amount })}
               />
             </FormField>
           </div>
@@ -593,20 +684,27 @@ export default function FeesPage() {
                 id="fee-te"
                 latin
                 value={title.en}
-                onChange={(e) => setTitle({ ...title, en: e.target.value })}
+                onChange={(e) => {
+                  const next = { ...title, en: e.target.value }
+                  setTitle(next)
+                  revalidateAddItem('title.ur', { title: next, amount })
+                }}
+                onBlur={() => onBlurAddItem('title.ur', { title, amount })}
               />
             </FormField>
           </div>
           <div className="exam-toolbar__field exam-toolbar__field--narrow">
-            <FormField k="amount" htmlFor="fee-amt">
+            <FormField k="amount" htmlFor="fee-amt" error={addItemErrors.amount}>
               <AppInput
                 id="fee-amt"
                 type="number"
                 latin
-                min={0}
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
+                onChange={(e) => {
+                  setAmount(e.target.value)
+                  revalidateAddItem('amount', { title, amount: e.target.value })
+                }}
+                onBlur={() => onBlurAddItem('amount', { title, amount })}
               />
             </FormField>
           </div>
@@ -713,6 +811,7 @@ export default function FeesPage() {
           onClose={() => {
             setDeleteBalanceTarget(null)
             setDeleteBalanceReason('')
+            setDeleteBalanceErrors({})
           }}
           size="md"
           dir={lng.split('-')[0] === 'ur' ? 'rtl' : 'ltr'}
@@ -725,15 +824,21 @@ export default function FeesPage() {
                   : '—'}
               </p>
               <p className="small text-danger mb-2">{t('fees.deleteBalanceNote')}</p>
-              <FormField label={t('fees.deleteBalanceReason')} htmlFor="delete-balance-reason">
+              <FormField
+                label={t('fees.deleteBalanceReason')}
+                htmlFor="delete-balance-reason"
+                error={deleteBalanceErrors.reason}
+              >
                 <AppInput
                   id="delete-balance-reason"
                   type="text"
                   value={deleteBalanceReason}
-                  onChange={(e) => setDeleteBalanceReason(e.target.value)}
+                  onChange={(e) => {
+                    setDeleteBalanceReason(e.target.value)
+                    revalidateDeleteBalance('reason', { reason: e.target.value })
+                  }}
+                  onBlur={() => onBlurDeleteBalance('reason', { reason: deleteBalanceReason })}
                   placeholder={t('fees.deleteBalanceReasonPlaceholder')}
-                  required
-                  minLength={5}
                   autoFocus
                 />
               </FormField>
@@ -745,6 +850,7 @@ export default function FeesPage() {
                 onClick={() => {
                   setDeleteBalanceTarget(null)
                   setDeleteBalanceReason('')
+                  setDeleteBalanceErrors({})
                 }}
               >
                 {t('common.cancel')}
@@ -782,17 +888,18 @@ export default function FeesPage() {
               </div>
 
               <FormRow>
-                <FormField label={t('fees.collectAmount')} htmlFor="fee-collect-amt" col={4}>
+                <FormField label={t('fees.collectAmount')} htmlFor="fee-collect-amt" col={4} error={collectErrors.amount}>
                   <AppInput
                     id="fee-collect-amt"
                     type="number"
                     latin
-                    min={1}
-                    max={Number(collectOpen.due) || undefined}
                     step="1"
                     value={collectAmount}
-                    onChange={(e) => setCollectAmount(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setCollectAmount(e.target.value)
+                      revalidateCollect('amount', { amount: e.target.value, accountId: collectAccountId })
+                    }}
+                    onBlur={() => onBlurCollect('amount', { amount: collectAmount, accountId: collectAccountId })}
                   />
                 </FormField>
 
@@ -806,12 +913,15 @@ export default function FeesPage() {
                   />
                 </FormField>
 
-                <FormField label={t('fees.accountLabel')} htmlFor="fee-collect-acc" col={4}>
+                <FormField label={t('fees.accountLabel')} htmlFor="fee-collect-acc" col={4} error={collectErrors.accountId}>
                   <AppSelect
                     id="fee-collect-acc"
                     value={collectAccountId}
-                    onChange={(e) => setCollectAccountId(e.target.value)}
-                    required
+                    onChange={(e) => {
+                      setCollectAccountId(e.target.value)
+                      revalidateCollect('accountId', { amount: collectAmount, accountId: e.target.value })
+                    }}
+                    onBlur={() => onBlurCollect('accountId', { amount: collectAmount, accountId: collectAccountId })}
                   >
                     <option value="">{t('fees.selectAccount')}</option>
                     {financeAccounts.map((a) => (
@@ -958,39 +1068,47 @@ export default function FeesPage() {
                     {t('fees.maafiMaxDue', { due: Number(adjustOpen.due) || 0 })}
                   </p>
                   <FormRow>
-                    <FormField label={t('fees.maafiAmount')} htmlFor="fee-maafi-amt" col={4}>
+                    <FormField label={t('fees.maafiAmount')} htmlFor="fee-maafi-amt" col={4} error={adjustErrors.amount}>
                       <AppInput
                         id="fee-maafi-amt"
                         type="number"
                         latin
-                        min={1}
-                        max={Number(adjustOpen.due) || 0}
                         value={adjustAmount}
                         onChange={(e) => {
                           const dueCap = Number(adjustOpen.due) || 0
                           const raw = e.target.value
-                          if (raw === '') {
-                            setAdjustAmount('')
-                            return
+                          let next = raw
+                          if (raw !== '') {
+                            const n = Number(raw)
+                            if (Number.isFinite(n)) next = String(Math.min(Math.max(0, n), dueCap))
                           }
-                          const n = Number(raw)
-                          if (!Number.isFinite(n)) {
-                            setAdjustAmount(raw)
-                            return
-                          }
-                          setAdjustAmount(String(Math.min(Math.max(0, n), dueCap)))
+                          setAdjustAmount(next)
+                          revalidateAdjust('amount', { mode: 'maafi', amount: next, reason: adjustReason, due: dueCap })
                         }}
-                        required
+                        onBlur={() =>
+                          revalidateAdjust('amount', {
+                            mode: 'maafi',
+                            amount: adjustAmount,
+                            reason: adjustReason,
+                            due: Number(adjustOpen.due) || 0,
+                          })
+                        }
                       />
                     </FormField>
-                    <FormField label={t('fees.maafiReason')} htmlFor="fee-maafi-reason" col={8}>
+                    <FormField label={t('fees.maafiReason')} htmlFor="fee-maafi-reason" col={8} error={adjustErrors.reason}>
                       <AppInput
                         id="fee-maafi-reason"
                         value={adjustReason}
-                        onChange={(e) => setAdjustReason(e.target.value)}
+                        onChange={(e) => {
+                          setAdjustReason(e.target.value)
+                          revalidateAdjust('reason', {
+                            mode: 'maafi',
+                            amount: adjustAmount,
+                            reason: e.target.value,
+                            due: Number(adjustOpen.due) || 0,
+                          })
+                        }}
                         placeholder={t('fees.maafiReasonPlaceholder')}
-                        required
-                        minLength={3}
                       />
                     </FormField>
                   </FormRow>
@@ -1012,13 +1130,19 @@ export default function FeesPage() {
                         onChange={(e) => setAdjustAmount(e.target.value)}
                       />
                     </FormField>
-                    <FormField label={t('fees.applyBalanceReason')} htmlFor="fee-bal-reason" col={8}>
+                    <FormField label={t('fees.applyBalanceReason')} htmlFor="fee-bal-reason" col={8} error={adjustErrors.reason}>
                       <AppInput
                         id="fee-bal-reason"
                         value={adjustReason}
-                        onChange={(e) => setAdjustReason(e.target.value)}
-                        required
-                        minLength={3}
+                        onChange={(e) => {
+                          setAdjustReason(e.target.value)
+                          revalidateAdjust('reason', {
+                            mode: 'balance',
+                            amount: adjustAmount,
+                            reason: e.target.value,
+                            due: Number(adjustOpen.due) || 0,
+                          })
+                        }}
                       />
                     </FormField>
                   </FormRow>

@@ -3981,6 +3981,15 @@ html[dir='rtl'] .tt-week-toggle {
     display: none !important;
   }
 
+  /* Allow long print jobs (ID cards, etc.) to paginate fully */
+  .app-shell,
+  .app-main-column,
+  .app-main-scroll {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
   .page-gradient {
     padding: 0 !important;
     background: #fff !important;

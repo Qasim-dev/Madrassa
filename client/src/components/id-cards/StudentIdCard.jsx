@@ -115,6 +115,11 @@ export default function StudentIdCardFace({
             <span className="sid-card__row-value">{formatDisplayDate(student?.dateOfBirth, lng, calendarMode)}</span>
           </div>
           <div className="sid-card__row">
+            <span className="sid-card__row-icon" aria-hidden>S</span>
+            <span className="sid-card__row-label">{en ? 'Section' : 'شعبہ'}</span>
+            <span className="sid-card__row-value">{sectionLabel(student, lng)}</span>
+          </div>
+          <div className="sid-card__row">
             <span className="sid-card__row-icon" aria-hidden>C</span>
             <span className="sid-card__row-label">{en ? 'Class' : 'درجہ'}</span>
             <span className="sid-card__row-value">{classLabel(student, lng)}</span>
@@ -187,8 +192,8 @@ export default function StudentIdCardFace({
         <div className="sid-card__name-plate">{name}</div>
         <div className="sid-card__meta">
           <span dir="ltr">ID: {admission}</span>
-          <span>{classLabel(student, lng)}</span>
           <span>{sectionLabel(student, lng)}</span>
+          <span>{classLabel(student, lng)}</span>
         </div>
         {showQr && qrDataUrl ? (
           <img src={qrDataUrl} alt="" className="sid-card__qr" />

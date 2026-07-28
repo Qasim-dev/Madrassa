@@ -409,22 +409,32 @@
     border: none;
     border-radius: 0;
     padding: 0;
-    gap: 2mm;
+    gap: 3mm;
+    justify-content: start;
   }
 
-  .sid-card-pair {
+  /* One student per page only in single-CR80 mode */
+  .sid-sheet--single .sid-card-pair {
     page-break-after: always;
     break-after: page;
   }
 
-  .sid-card-pair:last-child {
+  .sid-sheet--single .sid-card-pair:last-child,
+  .sid-sheet--single .sid-sheet-item:last-child .sid-card-pair {
     page-break-after: auto;
     break-after: auto;
   }
 
-  .sid-sheet--a4-8,
-  .sid-sheet--a4-10,
-  .sid-sheet--a4-12 {
-    page-break-after: always;
+  /* A4 grids: pack multiple cards per page; avoid splitting a card */
+  .sid-sheet--a4-8 .sid-card-pair,
+  .sid-sheet--a4-10 .sid-card-pair,
+  .sid-sheet--a4-12 .sid-card-pair,
+  .sid-sheet--a4-8 .sid-sheet-item,
+  .sid-sheet--a4-10 .sid-sheet-item,
+  .sid-sheet--a4-12 .sid-sheet-item {
+    page-break-after: auto;
+    break-after: auto;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }

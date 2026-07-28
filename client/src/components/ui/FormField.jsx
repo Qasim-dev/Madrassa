@@ -1,3 +1,4 @@
+import { Children, cloneElement, isValidElement, useId } from 'react'
 import BilingualLabel from '../BilingualLabel.jsx'
 import FieldStatusIcon from './FieldStatusIcon.jsx'
 import { cn } from './cn.js'
@@ -11,7 +12,8 @@ const COL_CLASS = {
 }
 
 /**
- * Floating-label field shell + hint/error (inspired by modern form UI).
+ * Floating-label field shell + hint/error (enterprise validation UX).
+ * Auto-wires aria-invalid / aria-describedby onto a single child control.
  */
 export default function FormField({
   k,
@@ -27,7 +29,10 @@ export default function FormField({
   langField,
   children,
 }) {
+  const reactId = useId()
   const showSuccess = valid && !error
+  const messageId = `${htmlFor || reactId}-msg`
+  const describedBy = error || hint ? messageId : undefined
 
   const labelNode =
     k != null ? (
@@ -44,6 +49,18 @@ export default function FormField({
         {required ? <span className="app-field__required">*</span> : null}
       </label>
     ) : null
+
+  const enhancedChildren = Children.map(children, (child) => {
+    if (!isValidElement(child)) return child
+    const prevDescribed = child.props['aria-describedby']
+    const nextDescribed = [prevDescribed, describedBy].filter(Boolean).join(' ') || undefined
+    return cloneElement(child, {
+      invalid: error ? true : child.props.invalid,
+      'aria-invalid': error ? true : child.props['aria-invalid'],
+      'aria-describedby': nextDescribed,
+      'aria-errormessage': error ? messageId : child.props['aria-errormessage'],
+    })
+  })
 
   const body = (
     <div
@@ -64,17 +81,19 @@ export default function FormField({
           (error || showSuccess) && 'app-field__shell--has-status'
         )}
       >
-        {children}
+        {enhancedChildren}
         {error ? <FieldStatusIcon variant="error" /> : null}
         {showSuccess ? <FieldStatusIcon variant="success" /> : null}
       </div>
-      {error ? (
-        <p className="app-field__error mb-0" role="alert">
-          {error}
-        </p>
-      ) : hint ? (
-        <p className="app-field__hint mb-0">{hint}</p>
-      ) : null}
+      <div className="app-field__message" id={messageId}>
+        {error ? (
+          <p className="app-field__error mb-0" role="alert">
+            {error}
+          </p>
+        ) : hint ? (
+          <p className="app-field__hint mb-0">{hint}</p>
+        ) : null}
+      </div>
     </div>
   )
 

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useResetPasswordMutation } from '../services/api'
-import { AppInput } from '../components/ui'
+import { AppInput, FormField } from '../components/ui'
+import { useFormValidation, resetPasswordSchema } from '../shared/validation'
 
 export default function ResetPasswordPage() {
   const { t, i18n } = useTranslation()
@@ -12,25 +13,35 @@ export default function ResetPasswordPage() {
   const [token, setToken] = useState(params.get('token') || '')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [formError, setFormError] = useState('')
   const [reset, { isLoading, error }] = useResetPasswordMutation()
+
+  const {
+    errors: fieldErrors,
+    onBlurField,
+    revalidateIfError,
+    validateAll,
+    focusInvalid,
+    applyApiError,
+  } = useFormValidation({
+    schema: resetPasswordSchema,
+    t,
+    fieldIds: { password: 'reset-pass', confirmPassword: 'reset-pass2' },
+    order: ['password', 'confirmPassword'],
+  })
 
   async function onSubmit(e) {
     e.preventDefault()
-    setFormError('')
-    if (password !== confirm) {
-      setFormError(t('auth.passwordMismatch'))
-      return
-    }
-    if (password.length < 8) {
-      setFormError(t('auth.passwordTooShort'))
+    const values = { password, confirmPassword: confirm }
+    const nextErrors = validateAll(values)
+    if (Object.keys(nextErrors).length) {
+      focusInvalid(nextErrors)
       return
     }
     try {
       await reset({ token: token.trim(), newPassword: password }).unwrap()
       navigate('/login', { replace: true })
-    } catch {
-      /* error banner */
+    } catch (err) {
+      applyApiError(err)
     }
   }
 
@@ -40,7 +51,7 @@ export default function ResetPasswordPage() {
         <h1 className="h4 mb-2">
           {t('auth.resetTitle', { defaultValue: isUr ? 'نیا پاس ورڈ' : 'Set new password' })}
         </h1>
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} noValidate>
           <label className="form-label" htmlFor="reset-token">
             {t('auth.resetToken', { defaultValue: isUr ? 'ری سیٹ ٹوکن' : 'Reset token' })}
           </label>
@@ -52,34 +63,36 @@ export default function ResetPasswordPage() {
             required
             className="mb-3"
           />
-          <label className="form-label" htmlFor="reset-pass">
-            {t('auth.password')}
-          </label>
-          <AppInput
-            id="reset-pass"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
+          <FormField label={t('auth.password')} htmlFor="reset-pass" required error={fieldErrors.password}>
+            <AppInput
+              id="reset-pass"
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                revalidateIfError('password', { password: e.target.value, confirmPassword: confirm })
+                revalidateIfError('confirmPassword', { password: e.target.value, confirmPassword: confirm })
+              }}
+              onBlur={() => onBlurField('password', { password, confirmPassword: confirm })}
+            />
+          </FormField>
+          <FormField
+            label={t('auth.confirmPassword', { defaultValue: isUr ? 'پاس ورڈ دوبارہ' : 'Confirm password' })}
+            htmlFor="reset-pass2"
             required
-            className="mb-3"
-          />
-          <label className="form-label" htmlFor="reset-pass2">
-            {t('auth.confirmPassword', { defaultValue: isUr ? 'پاس ورڈ دوبارہ' : 'Confirm password' })}
-          </label>
-          <AppInput
-            id="reset-pass2"
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            minLength={8}
-            required
-          />
-          {formError ? (
-            <div className="alert alert-warning py-2 small mt-2" role="alert">
-              {formError}
-            </div>
-          ) : null}
+            error={fieldErrors.confirmPassword}
+          >
+            <AppInput
+              id="reset-pass2"
+              type="password"
+              value={confirm}
+              onChange={(e) => {
+                setConfirm(e.target.value)
+                revalidateIfError('confirmPassword', { password, confirmPassword: e.target.value })
+              }}
+              onBlur={() => onBlurField('confirmPassword', { password, confirmPassword: confirm })}
+            />
+          </FormField>
           {error ? (
             <div className="alert alert-danger py-2 small mt-2" role="alert">
               {error.data?.message || t('auth.resetFailed', { defaultValue: 'Reset failed' })}

@@ -11,17 +11,19 @@ export function ageFromDob(dob) {
   return years
 }
 
-/** Current class: prefer tartibat درجہ + شعبہ جات (not legacy Grade). */
+/** Current class: prefer tartibat شعبہ then درجہ (not legacy Grade). */
 export function studentClassLabel(student, lng) {
   const darjah = student.darjahId
   const subject = student.subjectId
 
-  if (darjah?.name) {
-    const darjahName = loc(darjah.name, lng)
-    const code = darjah.code ? String(darjah.code).trim() : ''
-    const darjahLine = code && code !== darjahName ? `${darjahName} (${code})` : darjahName
+  if (darjah?.name || subject?.name) {
+    const darjahName = darjah?.name ? loc(darjah.name, lng) : ''
+    const code = darjah?.code ? String(darjah.code).trim() : ''
+    const darjahLine =
+      darjahName && code && code !== darjahName ? `${darjahName} (${code})` : darjahName
     const subjectName = subject?.name ? loc(subject.name, lng) : ''
-    return subjectName ? `${darjahLine} — ${subjectName}` : darjahLine
+    if (subjectName && darjahLine) return `${subjectName} — ${darjahLine}`
+    return subjectName || darjahLine || '—'
   }
 
   const grade = student.currentGradeId || student.gradeId

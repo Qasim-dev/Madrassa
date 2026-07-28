@@ -94,6 +94,11 @@ export default function AppDateInput({
   className = '',
   disabled,
   emptyCalendarYear,
+  invalid = false,
+  'aria-describedby': ariaDescribedBy,
+  'aria-invalid': ariaInvalid,
+  'aria-errormessage': ariaErrorMessage,
+  onBlur,
 }) {
   const isUr = (lng || 'ur').split('-')[0] === 'ur'
   const { mode } = useCalendarMode()
@@ -180,6 +185,7 @@ export default function AppDateInput({
     'w-100',
     className.includes('latin-input') || !isUr ? 'app-field__control--latin' : '',
     hasValue && !disabled ? 'app-date-input__field--has-clear' : '',
+    invalid ? 'app-field__control--invalid is-invalid' : '',
     className,
   ]
     .filter(Boolean)
@@ -220,6 +226,7 @@ export default function AppDateInput({
           const iso = pickerDateToIso(d)
           if (iso) onChange?.(iso)
         }}
+        onBlur={onBlur}
         inputClass={inputClass}
         containerClassName={`app-date-input w-100${isUr ? ' app-date-input--ur' : ' app-date-input--en'}`}
         calendarPosition={calendarPosition}
@@ -230,6 +237,9 @@ export default function AppDateInput({
         zIndex={12050}
         fixMainPosition={false}
         scrollSensitive
+        aria-invalid={invalid || ariaInvalid || undefined}
+        aria-describedby={ariaDescribedBy}
+        aria-errormessage={ariaErrorMessage}
         onOpen={() => {
           prepareOpen()
           fitCalendarInViewport()

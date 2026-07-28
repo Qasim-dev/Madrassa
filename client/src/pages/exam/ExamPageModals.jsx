@@ -14,17 +14,29 @@ export default function ExamPageModals({
   graceForm,
   setGraceForm,
   onApplyGrace,
+  graceErrors = {},
+  onGraceBlur,
+  onGraceChange,
+  savingGrace = false,
   examModal,
   setExamModal,
   editingExam,
   examForm,
   setExamForm,
   onSaveExam,
+  examErrors = {},
+  onExamBlur,
+  onExamChange,
+  savingExam = false,
   deleteTarget,
   setDeleteTarget,
   deleteExamReason,
   setDeleteExamReason,
   onDeleteExam,
+  deleteExamErrors = {},
+  onDeleteExamBlur,
+  onDeleteExamChange,
+  deletingExam = false,
   deleteScheduleTarget,
   setDeleteScheduleTarget,
   onDeleteSchedule,
@@ -42,6 +54,10 @@ export default function ExamPageModals({
   setUnlockReason,
   onCloseUnlockModal,
   onUnlockSubmit,
+  unlockErrors = {},
+  onUnlockBlur,
+  onUnlockChange,
+  savingUnlock = false,
 }) {
   const { t } = useTranslation()
 
@@ -55,6 +71,7 @@ export default function ExamPageModals({
               e.preventDefault()
               onApplyGrace()
             }}
+            noValidate
           >
             <div className="modal-app-body">
               <p className="small text-secondary mb-2">
@@ -68,18 +85,26 @@ export default function ExamPageModals({
                     min={0}
                     value={graceForm.graceMarks}
                     onChange={(e) => setGraceForm((f) => ({ ...f, graceMarks: e.target.value }))}
-                    required
                   />
                 </FormField>
               </div>
               <div className="mb-2">
-                <FormField label={t('exam.audit.reason')} htmlFor="grace-reason">
+                <FormField
+                  label={t('exam.audit.reason')}
+                  htmlFor="grace-reason"
+                  required
+                  error={graceErrors.reason}
+                >
                   <AppInput
                     id="grace-reason"
                     type="text"
                     value={graceForm.reason}
-                    onChange={(e) => setGraceForm((f) => ({ ...f, reason: e.target.value }))}
-                    required
+                    onChange={(e) => {
+                      const reason = e.target.value
+                      setGraceForm((f) => ({ ...f, reason }))
+                      onGraceChange?.('reason', { ...graceForm, reason })
+                    }}
+                    onBlur={() => onGraceBlur?.('reason')}
                   />
                 </FormField>
               </div>
@@ -88,7 +113,9 @@ export default function ExamPageModals({
               <button type="button" className="btn btn-outline-secondary" onClick={() => setGraceTarget(null)}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" className="btn btn-primary">{t('common.save')}</button>
+              <button type="submit" className="btn btn-primary" disabled={savingGrace}>
+                {t('common.save')}
+              </button>
             </div>
           </form>
         </AppModalShell>
@@ -105,14 +132,27 @@ export default function ExamPageModals({
               e.preventDefault()
               onSaveExam()
             }}
+            noValidate
           >
             <div className="modal-app-body">
               <FormRow className="app-form-row--2">
-                <FormField k="examNameUr" htmlFor="ex-u" langField="ur" col={6}>
+                <FormField
+                  k="examNameUr"
+                  htmlFor="ex-u"
+                  langField="ur"
+                  col={6}
+                  required
+                  error={examErrors['name.ur']}
+                >
                   <AppInput
                     id="ex-u"
                     value={examForm.name.ur}
-                    onChange={(e) => setExamForm((f) => ({ ...f, name: { ...f.name, ur: e.target.value } }))}
+                    onChange={(e) => {
+                      const next = { ...examForm, name: { ...examForm.name, ur: e.target.value } }
+                      setExamForm(next)
+                      onExamChange?.('name.ur', next)
+                    }}
+                    onBlur={() => onExamBlur?.('name.ur')}
                     dir="rtl"
                   />
                 </FormField>
@@ -121,7 +161,12 @@ export default function ExamPageModals({
                     id="ex-e"
                     latin
                     value={examForm.name.en}
-                    onChange={(e) => setExamForm((f) => ({ ...f, name: { ...f.name, en: e.target.value } }))}
+                    onChange={(e) => {
+                      const next = { ...examForm, name: { ...examForm.name, en: e.target.value } }
+                      setExamForm(next)
+                      onExamChange?.('name.ur', next)
+                    }}
+                    onBlur={() => onExamBlur?.('name.ur')}
                   />
                 </FormField>
               </FormRow>
@@ -186,10 +231,28 @@ export default function ExamPageModals({
               )}
               <FormRow className="app-form-row--2">
                 <FormField label={t('exam.col.start')} htmlFor="ex-start" col={6}>
-                  <AppDateInput id="ex-start" value={examForm.startDate} onChange={(v) => setExamForm((f) => ({ ...f, startDate: v }))} />
+                  <AppDateInput
+                    id="ex-start"
+                    value={examForm.startDate}
+                    onChange={(v) => {
+                      const next = { ...examForm, startDate: v }
+                      setExamForm(next)
+                      onExamChange?.('endDate', next)
+                    }}
+                    onBlur={() => onExamBlur?.('endDate')}
+                  />
                 </FormField>
-                <FormField label={t('exam.col.end')} htmlFor="ex-end" col={6}>
-                  <AppDateInput id="ex-end" value={examForm.endDate} onChange={(v) => setExamForm((f) => ({ ...f, endDate: v }))} />
+                <FormField label={t('exam.col.end')} htmlFor="ex-end" col={6} error={examErrors.endDate}>
+                  <AppDateInput
+                    id="ex-end"
+                    value={examForm.endDate}
+                    onChange={(v) => {
+                      const next = { ...examForm, endDate: v }
+                      setExamForm(next)
+                      onExamChange?.('endDate', next)
+                    }}
+                    onBlur={() => onExamBlur?.('endDate')}
+                  />
                 </FormField>
               </FormRow>
               <FormRow>
@@ -206,7 +269,7 @@ export default function ExamPageModals({
               <button type="button" className="btn btn-outline-secondary" onClick={() => setExamModal(false)}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" className="btn btn-primary" disabled={savingExam}>
                 {t('common.save')}
               </button>
             </div>
@@ -225,6 +288,7 @@ export default function ExamPageModals({
               e.preventDefault()
               onDeleteExam().then(() => {}).catch(() => {})
             }}
+            noValidate
           >
             <div className="modal-app-body">
               <p className="small text-secondary mb-2">
@@ -232,14 +296,23 @@ export default function ExamPageModals({
               </p>
               <p className="small text-danger mb-2">{t('exam.deleteCascadeNote')}</p>
               <p className="small text-secondary mb-2">{t('exam.deleteAuditNote')}</p>
-              <FormField label={t('exam.deleteReasonLabel')} htmlFor="delete-exam-reason">
+              <FormField
+                label={t('exam.deleteReasonLabel')}
+                htmlFor="delete-exam-reason"
+                required
+                error={deleteExamErrors.reason}
+              >
                 <AppInput
                   id="delete-exam-reason"
                   type="text"
                   value={deleteExamReason}
-                  onChange={(e) => setDeleteExamReason(e.target.value)}
+                  onChange={(e) => {
+                    const reason = e.target.value
+                    setDeleteExamReason(reason)
+                    onDeleteExamChange?.('reason', { reason })
+                  }}
+                  onBlur={() => onDeleteExamBlur?.('reason')}
                   placeholder={t('exam.deleteReasonPlaceholder')}
-                  required
                   minLength={10}
                   autoFocus
                 />
@@ -256,7 +329,7 @@ export default function ExamPageModals({
               <button
                 type="submit"
                 className="btn btn-danger"
-                disabled={deleteExamReason.trim().length < 10}
+                disabled={deletingExam || deleteExamReason.trim().length < 10}
               >
                 {t('common.delete')}
               </button>
@@ -321,15 +394,25 @@ export default function ExamPageModals({
               e.preventDefault()
               onUnlockSubmit().then(() => onCloseUnlockModal()).catch(() => {})
             }}
+            noValidate
           >
             <div className="modal-app-body">
-              <FormField label={t('exam.unlockReasonPrompt')} htmlFor="unlock-reason">
+              <FormField
+                label={t('exam.unlockReasonPrompt')}
+                htmlFor="unlock-reason"
+                required
+                error={unlockErrors.reason}
+              >
                 <AppInput
                   id="unlock-reason"
                   type="text"
                   value={unlockReason}
-                  onChange={(e) => setUnlockReason(e.target.value)}
-                  required
+                  onChange={(e) => {
+                    const reason = e.target.value
+                    setUnlockReason(reason)
+                    onUnlockChange?.('reason', { reason })
+                  }}
+                  onBlur={() => onUnlockBlur?.('reason')}
                   autoFocus
                 />
               </FormField>
@@ -338,7 +421,7 @@ export default function ExamPageModals({
               <button type="button" className="btn btn-outline-secondary" onClick={onCloseUnlockModal}>
                 {t('common.cancel')}
               </button>
-              <button type="submit" className="btn btn-warning" disabled={!unlockReason.trim()}>
+              <button type="submit" className="btn btn-warning" disabled={savingUnlock || !unlockReason.trim()}>
                 {t('common.confirm')}
               </button>
             </div>
