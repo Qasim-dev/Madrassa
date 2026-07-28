@@ -20,14 +20,16 @@ export default function ConfirmDeleteModal({
 }) {
   const { t } = useTranslation()
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
 
   const handleConfirm = useCallback(async () => {
     setBusy(true)
+    setError('')
     try {
       await onConfirm()
       onClose()
     } catch (err) {
-      alert(err?.data?.message || err?.error || t('common.deleteFailed'))
+      setError(err?.data?.message || err?.error || err?.message || t('common.deleteFailed'))
     } finally {
       setBusy(false)
     }
@@ -45,7 +47,14 @@ export default function ConfirmDeleteModal({
 
   return (
     <AppModalShell title={title} onClose={onClose} dir={dir} dialogClassName={dialogClassName}>
-      <div className="modal-app-body">{body}</div>
+      <div className="modal-app-body">
+        {body}
+        {error ? (
+          <div className="alert alert-danger py-2 small mt-3 mb-0" role="alert">
+            {error}
+          </div>
+        ) : null}
+      </div>
       <div className="modal-app-footer d-flex flex-wrap gap-2 justify-content-end">
         <button type="button" className="btn btn-outline-secondary" disabled={busy} onClick={onClose}>
           {cancelLabel ?? t('common.cancel')}

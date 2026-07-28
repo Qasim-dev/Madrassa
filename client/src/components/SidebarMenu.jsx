@@ -12,7 +12,7 @@ function isChildPathActive(pathname, item) {
   return pathname.startsWith(`${to}/`)
 }
 
-function SidebarSubmenu({ labelKey, icon, children, open, onToggle }) {
+function SidebarSubmenu({ labelKey, icon, children, open, onToggle, onNavigate }) {
   const { i18n } = useTranslation()
   const location = useLocation()
   const pair = FL[labelKey]
@@ -55,7 +55,7 @@ function SidebarSubmenu({ labelKey, icon, children, open, onToggle }) {
       {open ? (
         <div className="sidebar-submenu__children flex flex-col gap-1">
           {children.map((item) => (
-            <SidebarMenuItem key={item.to + (item.navKey || '')} {...item} nested />
+            <SidebarMenuItem key={item.to + (item.navKey || '')} {...item} nested onNavigate={onNavigate} />
           ))}
         </div>
       ) : null}
@@ -63,7 +63,7 @@ function SidebarSubmenu({ labelKey, icon, children, open, onToggle }) {
   )
 }
 
-export function SidebarMenuItem({ to, end, navKey, icon, nested }) {
+export function SidebarMenuItem({ to, end, navKey, icon, nested, onNavigate }) {
   const { i18n } = useTranslation()
   const pair = FL[navKey]
   if (!pair) return null
@@ -75,6 +75,7 @@ export function SidebarMenuItem({ to, end, navKey, icon, nested }) {
     <NavLink
       to={to}
       end={end}
+      onClick={() => onNavigate?.()}
       className={({ isActive }) =>
         `sidebar-menu-link ${nested ? 'sidebar-menu-link--nested' : ''} ${isActive ? 'sidebar-menu-link--active' : ''}`
       }
@@ -96,7 +97,7 @@ export function SidebarMenuItem({ to, end, navKey, icon, nested }) {
 }
 
 /** One link per section — uses the route label (e.g. navDashboard → ڈیش بورڈ), not the group title (جائزہ). */
-function SidebarGroupSingleLink({ labelKey, icon, item }) {
+function SidebarGroupSingleLink({ labelKey, icon, item, onNavigate }) {
   const { i18n } = useTranslation()
   const pair = FL[item.navKey] || FL[labelKey]
   if (!pair) return null
@@ -109,6 +110,7 @@ function SidebarGroupSingleLink({ labelKey, icon, item }) {
     <NavLink
       to={item.to}
       end={item.end}
+      onClick={() => onNavigate?.()}
       className={({ isActive }) =>
         `sidebar-menu-link ${isActive ? 'sidebar-menu-link--active' : ''}`
       }
@@ -129,7 +131,7 @@ function SidebarGroupSingleLink({ labelKey, icon, item }) {
   )
 }
 
-export function SidebarMenu({ groups }) {
+export function SidebarMenu({ groups, onNavigate }) {
   const location = useLocation()
 
   const activeGroupKey = useMemo(() => {
@@ -156,7 +158,13 @@ export function SidebarMenu({ groups }) {
     <nav className="sidebar-menu sidebar-menu-scroll flex flex-1 min-h-0 flex-col gap-1.5 px-3 py-2" aria-label="Main">
       {groups.map((g) =>
         g.items.length === 1 ? (
-          <SidebarGroupSingleLink key={g.labelKey} labelKey={g.labelKey} icon={g.icon} item={g.items[0]} />
+          <SidebarGroupSingleLink
+            key={g.labelKey}
+            labelKey={g.labelKey}
+            icon={g.icon}
+            item={g.items[0]}
+            onNavigate={onNavigate}
+          />
         ) : (
           <SidebarSubmenu
             key={g.labelKey}
@@ -164,6 +172,7 @@ export function SidebarMenu({ groups }) {
             icon={g.icon}
             open={openGroupKey === g.labelKey}
             onToggle={handleGroupToggle}
+            onNavigate={onNavigate}
           >
             {g.items}
           </SidebarSubmenu>

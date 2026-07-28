@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import { logout, setUser } from '../features/auth/authSlice'
@@ -109,6 +109,7 @@ function MainLayoutInner() {
   const { mode, toggle } = useCalendarMode()
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
   const token = useSelector((s) => s.auth.token)
   const user = useSelector((s) => s.auth.user)
   const activeSessionId = useSelector((s) => s.session.activeSessionId)
@@ -117,6 +118,29 @@ function MainLayoutInner() {
   const { data: sessionsForHeader = [] } = useGetSessionsQuery(undefined, { skip: !token })
   const [logoutSession] = useLogoutSessionMutation()
   const logoAbs = absoluteAssetUrl(settings?.logoUrl)
+  const [navOpen, setNavOpen] = useState(false)
+
+  useEffect(() => {
+    setNavOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!navOpen) return undefined
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [navOpen])
+
+  useEffect(() => {
+    if (!navOpen) return undefined
+    function onKey(e) {
+      if (e.key === 'Escape') setNavOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navOpen])
 
   const visibleMenuGroups = useMemo(() => {
     const actor = user || me
@@ -266,7 +290,15 @@ function MainLayoutInner() {
 
   return (
     <div className="app-shell flex h-dvh max-h-dvh flex-col overflow-hidden md:flex-row">
-      <aside className="sidebar-shell no-print flex min-h-0 w-full shrink-0 flex-col overflow-hidden md:h-full md:w-[17.5rem] max-h-[min(52vh,26rem)] md:max-h-none">
+      <div
+        className={`sidebar-backdrop no-print${navOpen ? ' is-open' : ''}`}
+        aria-hidden={!navOpen}
+        onMouseDown={() => setNavOpen(false)}
+      />
+      <aside
+        className={`sidebar-shell no-print flex min-h-0 w-full shrink-0 flex-col overflow-hidden md:h-full md:w-[17.5rem] md:max-h-none${navOpen ? ' is-open' : ''}`}
+        aria-hidden={false}
+      >
         <div className="sidebar-brand shrink-0 px-4 py-4 relative overflow-hidden">
           <div className="sidebar-brand__glow pointer-events-none absolute inset-0 opacity-50" aria-hidden />
           <div className="sidebar-brand__card relative">
@@ -316,13 +348,24 @@ function MainLayoutInner() {
           </div>
         </div>
 
-        <SidebarMenu groups={visibleMenuGroups} />
+        <SidebarMenu groups={visibleMenuGroups} onNavigate={() => setNavOpen(false)} />
       </aside>
 
       <div className="app-main-column flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="app-header-block no-print">
           <header className="app-topbar mx-3 mt-3 rounded-3xl border border-slate-200/90 bg-white px-4 py-2.5 shadow-sm md:mx-6 md:mt-4 md:px-5 md:py-3">
             <div className="app-topbar__inner">
+              <button
+                type="button"
+                className="sidebar-menu-toggle"
+                aria-label={t('header.openMenu')}
+                aria-expanded={navOpen}
+                onClick={() => setNavOpen(true)}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
               <div className="app-header-session-group app-topbar__session">
                 <label className="app-topbar__session-label mb-0" htmlFor="hdr-session" lang={brandLang}>
                   {lng === 'ur' ? 'سیشن' : 'Session'}
