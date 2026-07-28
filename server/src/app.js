@@ -34,6 +34,7 @@ import idCardsRoutes from './routes/idCards.routes.js';
 import publicIdCardsRoutes from './routes/publicIdCards.routes.js';
 import studentActivitiesRoutes from './routes/studentActivities.routes.js';
 import usersRoutes from './routes/users.routes.js';
+import recycleBinRoutes from './routes/recycleBin.routes.js';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -92,6 +93,7 @@ export function createApp() {
   app.use('/api/speeches', requireAuth, speechesRoutes);
   app.use('/api/id-cards', requireAuth, idCardsRoutes);
   app.use('/api/student-activities', requireAuth, studentActivitiesRoutes);
+  app.use('/api/recycle-bin', requireAuth, recycleBinRoutes);
 
   app.use(errorHandler);
   return app;

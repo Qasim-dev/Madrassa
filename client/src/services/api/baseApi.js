@@ -99,6 +99,7 @@ export const api = createApi({
     'IdCard',
     'StudentActivity',
     'User',
+    'RecycleBin',
   ],
   endpoints: () => ({}),
 })

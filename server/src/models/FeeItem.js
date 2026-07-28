@@ -34,6 +34,9 @@ const feeItemSchema = new mongoose.Schema(
       default: null,
     },
     deletedAt: { type: Date, default: null, index: true },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    deleteReason: { type: String, default: '', trim: true, maxlength: 500 },
   },
   { timestamps: true }
 );
@@ -41,5 +44,6 @@ const feeItemSchema = new mongoose.Schema(
 tenantPlugin(feeItemSchema);
 feeItemSchema.index({ tenantId: 1, sessionId: 1, tab: 1 });
 feeItemSchema.index({ tenantId: 1, darjahId: 1 });
+feeItemSchema.index({ tenantId: 1, isDeleted: 1, deletedAt: -1 });
 
 export const FeeItem = mongoose.model('FeeItem', feeItemSchema);

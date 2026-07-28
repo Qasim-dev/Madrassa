@@ -37,6 +37,10 @@ const teacherSchema = new mongoose.Schema(
       default: 'active',
     },
     assignments: [teacherAssignmentSchema],
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    deleteReason: { type: String, default: '', trim: true, maxlength: 500 },
   },
   { timestamps: true }
 );
@@ -44,5 +48,6 @@ const teacherSchema = new mongoose.Schema(
 tenantPlugin(teacherSchema);
 teacherSchema.index({ tenantId: 1, status: 1 });
 teacherSchema.index({ tenantId: 1, 'assignments.sessionId': 1 });
+teacherSchema.index({ tenantId: 1, isDeleted: 1, deletedAt: -1 });
 
 export const Teacher = mongoose.model('Teacher', teacherSchema);

@@ -57,6 +57,7 @@ export const FL = {
   navSettings: { ur: 'ترقیات / ترتیبات', en: 'Settings' },
   navProfile: { ur: 'پروفائل', en: 'Profile' },
   navUsers: { ur: 'صارفین', en: 'Users' },
+  navRecycleBin: { ur: 'ری سائیکل بن', en: 'Recycle Bin' },
   navTartibat: { ur: 'ترتیبات', en: 'Tartibat' },
   navTartibatSessions: { ur: 'سیشن', en: 'Sessions' },
   navTartibatSubjects: { ur: 'شعبہ جات', en: 'Subajat' },

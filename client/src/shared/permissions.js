@@ -26,6 +26,9 @@ export const PERMISSIONS = {
   'settings:write': ['admin'],
   'users:manage': ['admin'],
   'bookreading:write': ['admin', 'staff'],
+  'recycle:read': ['admin'],
+  'recycle:restore': ['admin'],
+  'recycle:purge': ['admin'],
 }
 
 export function roleHasPermission(role, permission) {

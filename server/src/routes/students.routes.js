@@ -18,6 +18,7 @@ import { escapeRegex } from '../utils/escapeRegex.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { withNotDeleted, NOT_DELETED } from '../utils/softDelete.js';
+import { softDeleteRecord } from '../services/recycleBin.service.js';
 
 const router = Router();
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -372,13 +373,16 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', requirePermission('students:delete'), async (req, res, next) => {
   try {
-    const doc = await Student.findOneAndUpdate(
-      { _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED },
-      { $set: { deletedAt: new Date() } },
-      { new: true }
-    );
-    if (!doc) return res.status(404).json({ message: 'Not found' });
-    res.json({ ok: true, softDeleted: true });
+    const reason = req.body?.reason || req.query?.reason || '';
+    const { item } = await softDeleteRecord({
+      module: 'student',
+      recordId: req.params.id,
+      tenantId: req.tenantId,
+      userId: req.user?.userId || req.user?._id,
+      reason,
+      req,
+    });
+    res.json({ ok: true, softDeleted: true, recycleItemId: item._id });
   } catch (e) {
     next(e);
   }

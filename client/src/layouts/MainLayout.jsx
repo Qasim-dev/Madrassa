@@ -88,6 +88,7 @@ const menuGroups = [
     icon: 'settings',
     items: [
       { to: '/users', navKey: 'navUsers', icon: 'profile', permission: 'users:manage' },
+      { to: '/recycle-bin', navKey: 'navRecycleBin', icon: 'recycle', permission: 'recycle:read' },
       { to: '/settings', navKey: 'navSettings', icon: 'settings', permission: 'settings:write' },
       { to: '/profile', navKey: 'navProfile', icon: 'profile' },
     ],

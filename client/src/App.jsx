@@ -42,6 +42,7 @@ const ExamsPage = lazy(() => import('./pages/ExamsPage'))
 const ExamResultPrintPage = lazy(() => import('./pages/ExamResultPrintPage'))
 const StudentCharacterPage = lazy(() => import('./pages/StudentCharacterPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
+const RecycleBinPage = lazy(() => import('./pages/RecycleBinPage'))
 
 function RouteFallback() {
   return (
@@ -157,6 +158,14 @@ export const router = createBrowserRouter(
           element={
             <Guard permission="users:manage">
               <UsersPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="recycle-bin"
+          element={
+            <Guard permission="recycle:read">
+              <RecycleBinPage />
             </Guard>
           }
         />

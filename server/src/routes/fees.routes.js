@@ -7,6 +7,7 @@ import { FeeAuditLog } from '../models/FeeAuditLog.js';
 import { recordFeeCollection } from '../services/financeFlows.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 import { withNotDeleted, NOT_DELETED } from '../utils/softDelete.js';
+import { softDeleteRecord } from '../services/recycleBin.service.js';
 
 const router = Router();
 
@@ -95,13 +96,16 @@ router.put('/items/:id', async (req, res, next) => {
 
 router.delete('/items/:id', async (req, res, next) => {
   try {
-    const doc = await FeeItem.findOneAndUpdate(
-      { _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED },
-      { $set: { deletedAt: new Date() } },
-      { new: true }
-    );
-    if (!doc) return res.status(404).json({ message: 'Not found' });
-    res.json({ ok: true, softDeleted: true });
+    const reason = req.body?.reason || '';
+    const { item } = await softDeleteRecord({
+      module: 'fee_item',
+      recordId: req.params.id,
+      tenantId: req.tenantId,
+      userId: req.user?.userId || req.user?._id,
+      reason,
+      req,
+    });
+    res.json({ ok: true, softDeleted: true, recycleItemId: item._id });
   } catch (e) {
     next(e);
   }

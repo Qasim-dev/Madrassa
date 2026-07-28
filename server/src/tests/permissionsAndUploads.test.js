@@ -28,6 +28,8 @@ test('admin has full money and user permissions', () => {
   assert.equal(roleHasPermission('admin', 'finance:write'), true);
   assert.equal(roleHasPermission('admin', 'users:manage'), true);
   assert.ok(permissionsForRole('admin').includes('fees:write'));
+  assert.equal(roleHasPermission('admin', 'recycle:purge'), true);
+  assert.equal(roleHasPermission('staff', 'recycle:read'), false);
 });
 
 test('signed upload path rejects traversal and validates HMAC', () => {

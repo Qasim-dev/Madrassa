@@ -17,6 +17,7 @@ import './api/timetableApi.js'
 import './api/geoApi.js'
 import './api/examsApi.js'
 import './api/bookReadingApi.js'
+import './api/recycleBinApi.js'
 
 export { api } from './api/baseApi.js'
 
@@ -209,5 +210,11 @@ export const {
   useBulkSaveDailyActivitiesMutation,
   useCopyDailyActivitiesMutation,
   useGetStudentActivityHistoryQuery,
-  useGetActivityAnalyticsSummaryQuery
+  useGetActivityAnalyticsSummaryQuery,
+  useGetRecycleBinQuery,
+  useGetRecycleBinItemQuery,
+  useRestoreRecycleItemMutation,
+  useBulkRestoreRecycleMutation,
+  usePermanentDeleteRecycleMutation,
+  useBulkPermanentDeleteRecycleMutation,
 } = api

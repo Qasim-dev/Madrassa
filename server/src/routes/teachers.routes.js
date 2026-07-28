@@ -14,6 +14,8 @@ import {
 import { escapeRegex } from '../utils/escapeRegex.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { withNotDeleted, NOT_DELETED } from '../utils/softDelete.js';
+import { softDeleteRecord } from '../services/recycleBin.service.js';
 
 const router = Router();
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -25,7 +27,7 @@ router.get('/', async (req, res, next) => {
         ? new mongoose.Types.ObjectId(String(req.query.sessionId))
         : null;
 
-    const base = { tenantId: req.tenantId };
+    const base = withNotDeleted({ tenantId: req.tenantId });
     if (sessionOid) {
       base.assignments = { $elemMatch: { sessionId: sessionOid } };
     }
@@ -198,7 +200,7 @@ router.post('/import', requirePermission('teachers:write'), uploadExcel.single('
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const doc = await Teacher.findOne({ _id: req.params.id, tenantId: req.tenantId })
+    const doc = await Teacher.findOne({ _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED })
       .populate('assignments.sessionId')
       .populate('assignments.darjahId')
       .populate('assignments.subjectId')
@@ -242,11 +244,18 @@ router.put('/:id', requirePermission('teachers:write'), async (req, res, next) =
   }
 });
 
-router.delete('/:id', requirePermission('teachers:write'), async (req, res, next) => {
+router.delete('/:id', requirePermission('teachers:delete'), async (req, res, next) => {
   try {
-    const doc = await Teacher.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
-    if (!doc) return res.status(404).json({ message: 'Not found' });
-    res.json({ ok: true });
+    const reason = req.body?.reason || '';
+    const { item } = await softDeleteRecord({
+      module: 'teacher',
+      recordId: req.params.id,
+      tenantId: req.tenantId,
+      userId: req.user?.userId || req.user?._id,
+      reason,
+      req,
+    });
+    res.json({ ok: true, softDeleted: true, recycleItemId: item._id });
   } catch (e) {
     next(e);
   }
