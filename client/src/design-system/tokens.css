@@ -40,11 +40,11 @@
   --ds-divider: #f1f1ed;
 
   --ds-text: #17181c;
-  --ds-text-secondary: #44474f;
-  --ds-text-muted: #6f7480;
-  --ds-text-subtle: #9aa0ab;
-  --ds-text-disabled: #c4c8cf;
-  --ds-placeholder: #9aa0ab;
+  --ds-text-secondary: #3f434c;
+  --ds-text-muted: #575b66;
+  --ds-text-subtle: #6f7480;
+  --ds-text-disabled: #8b909a;
+  --ds-placeholder: #6f7480;
 
   --ds-disabled-bg: #f1f1ed;
   --ds-disabled-border: #eae9e4;
@@ -160,7 +160,7 @@
   --ds-btn-height-ur: 2.5rem;
   --ds-leading-section-ur: var(--ds-leading-urdu);
   --ds-section-title-hint-gap-ur: 0.5rem;
-  --ds-text-muted-strong: #64748b;
+  --ds-text-muted-strong: #4b5563;
 
   /* Print form — light primary greens (readable white text) */
   --ds-print-header: #2db87a;

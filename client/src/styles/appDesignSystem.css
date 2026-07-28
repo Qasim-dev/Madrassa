@@ -20,7 +20,7 @@
   --app-surface-muted: #f8f8f6;
 
   --app-text: #17181c;
-  --app-text-muted: #6f7480;
+  --app-text-muted: #575b66;
   --app-text-subtle: #9aa0ab;
 
   --app-border: #eae9e4;
@@ -100,7 +100,7 @@
 }
 
 .app-tabs__tab.is-disabled {
-  opacity: 0.45;
+  opacity: 0.68;
   cursor: not-allowed;
 }
 
