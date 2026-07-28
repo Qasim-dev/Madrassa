@@ -28,7 +28,7 @@ router.post(
 router.post(
   '/register',
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
+  body('password').isLength({ min: 8 }),
   body('nameUr').optional().isString(),
   body('nameEn').optional().isString(),
   async (req, res, next) => {
@@ -153,7 +153,7 @@ router.post(
   '/change-password',
   requireAuth,
   body('currentPassword').notEmpty(),
-  body('newPassword').isLength({ min: 6 }),
+  body('newPassword').isLength({ min: 8 }),
   async (req, res, next) => {
     try {
       const errors = validationResult(req);

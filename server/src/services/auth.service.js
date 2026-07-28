@@ -55,7 +55,7 @@ function buildAuthResult(user, tenant) {
 
 export async function login(email, password) {
   const normalizedEmail = normalizeEmail(email);
-  const user = await User.findOne({ email: normalizedEmail });
+  const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
   if (!user) {
     const err = new Error('Invalid credentials');
     err.status = 401;
@@ -85,7 +85,7 @@ export async function login(email, password) {
  * Register a new organization (internal tenant slug) and first admin identified by unique email.
  */
 export async function register({ nameUr, nameEn, email, password }) {
-  if (process.env.ALLOW_SIGNUP === 'false') {
+  if (process.env.ALLOW_SIGNUP !== 'true') {
     const err = new Error('Registration is disabled');
     err.status = 403;
     throw err;
@@ -106,8 +106,8 @@ export async function register({ nameUr, nameEn, email, password }) {
     throw err;
   }
 
-  if (!password || String(password).length < 6) {
-    const err = new Error('Password must be at least 6 characters');
+  if (!password || String(password).length < 8) {
+    const err = new Error('Password must be at least 8 characters');
     err.status = 400;
     throw err;
   }
@@ -143,7 +143,12 @@ export async function register({ nameUr, nameEn, email, password }) {
 }
 
 export async function changePassword(userId, tenantId, currentPassword, newPassword) {
-  const user = await User.findOne({ _id: userId, tenantId });
+  if (!newPassword || String(newPassword).length < 8) {
+    const err = new Error('Password must be at least 8 characters');
+    err.status = 400;
+    throw err;
+  }
+  const user = await User.findOne({ _id: userId, tenantId }).select('+passwordHash');
   if (!user) {
     const err = new Error('User not found');
     err.status = 404;
@@ -155,7 +160,7 @@ export async function changePassword(userId, tenantId, currentPassword, newPassw
     err.status = 400;
     throw err;
   }
-  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  user.passwordHash = await bcrypt.hash(String(newPassword), 10);
   await user.save();
   return { ok: true };
 }

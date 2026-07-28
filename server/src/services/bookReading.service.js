@@ -9,6 +9,7 @@ import {
   computeReadingStatus,
   pageRangesOverlap,
 } from '../constants/readingEnums.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
 
 export function parseReadingDate(value) {
   if (!value) return null;
@@ -178,7 +179,7 @@ export async function listReadingRecords({
   if (search?.trim()) {
     const q = search.trim();
     const num = Number(q);
-    const or = [{ notes: { $regex: q, $options: 'i' } }];
+    const or = [{ notes: { $regex: escapeRegex(q), $options: 'i' } }];
     if (Number.isFinite(num)) {
       or.push({ startPage: num }, { endPage: num }, { pagesRead: num });
     }

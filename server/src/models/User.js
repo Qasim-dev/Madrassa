@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, trim: true, lowercase: true, unique: true },
     phone: { type: String, trim: true, default: '' },
     name: { type: localizedSchema, default: () => ({}) },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, required: true, select: false },
     preferredLocale: { type: String, enum: ['ur', 'en'], default: 'ur' },
     role: { type: String, enum: ['admin', 'staff'], default: 'admin' },
   },
