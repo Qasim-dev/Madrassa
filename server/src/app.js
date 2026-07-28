@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { uploadsDir } from './config/upload.js';
 import { requireAuth } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -28,10 +30,26 @@ import libraryRoutes from './routes/library.routes.js';
 import speechesRoutes from './routes/speeches.routes.js';
 import idCardsRoutes from './routes/idCards.routes.js';
 import publicIdCardsRoutes from './routes/publicIdCards.routes.js';
+import studentActivitiesRoutes from './routes/studentActivities.routes.js';
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many auth attempts. Please try again later.' },
+});
 
 export function createApp() {
   const app = express();
   const origin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: false,
+    })
+  );
   app.use(cors({ origin, credentials: true }));
   app.use(express.json({ limit: '2mb' }));
 
@@ -39,7 +57,7 @@ export function createApp() {
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-  app.use('/api/auth', authRoutes);
+  app.use('/api/auth', authLimiter, authRoutes);
   app.use('/api/public/id-cards', publicIdCardsRoutes);
 
   app.use('/api/dashboard', requireAuth, dashboardRoutes);
@@ -64,6 +82,7 @@ export function createApp() {
   app.use('/api/library', requireAuth, libraryRoutes);
   app.use('/api/speeches', requireAuth, speechesRoutes);
   app.use('/api/id-cards', requireAuth, idCardsRoutes);
+  app.use('/api/student-activities', requireAuth, studentActivitiesRoutes);
 
   app.use(errorHandler);
   return app;
