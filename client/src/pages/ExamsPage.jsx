@@ -1,16 +1,7 @@
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
+import { useMemo, useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-} from 'recharts'
 import {
   useGetExamDashboardQuery,
   useGetExamResultMatrixQuery,
@@ -51,59 +42,31 @@ import {
   api,
 } from '../services/api'
 import { loc } from '../shared/localized'
-import { formatDisplayDate } from '../shared/formatDisplayDate'
 import { useCalendarMode } from '../app/calendarMode'
 import {
   EXAM_WORKFLOW_STEPS,
-  EXAM_ATTENDANCE_STATUS,
-  EXAM_SUBJECT_TYPES,
-  statusLabel,
-  examSubjectTypeLabel,
-  divisionLabel,
   getExamWorkflowGate,
 } from '../shared/examEnums'
 import ExamContextBar from '../components/exam/ExamContextBar'
 import ExamPhaseStepper from '../components/exam/ExamPhaseStepper'
-import ExamRollAssignPanel from '../components/exam/ExamRollAssignPanel'
-import ExamAnnouncePanel from '../components/exam/ExamAnnouncePanel'
 import PageHeading from '../components/PageHeading'
-import DataTable from '../components/DataTable'
-import AppModalShell from '../components/AppModalShell'
-import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
-import ConfirmActionModal from '../components/ConfirmActionModal'
-import AppDateInput from '../components/AppDateInput'
 import ExamDashboardCards from '../components/exam/ExamDashboardCards'
-import AppKpiCards from '../components/ui/AppKpiCards'
-import ExamResultMatrix from '../components/exam/ExamResultMatrix'
-import ExamAuditPanel from '../components/exam/ExamAuditPanel'
-import ExamStepHeader from '../components/exam/ExamStepHeader'
-import { AppInput, AppSelect, AppCheckbox, FormField, FormRow } from '../components/ui'
 import './examDashboard.css'
 
-const CHART_COL = ['#0f8f5f', '#12a873', '#26ba99', '#5eead4', '#0b6e49', '#99f6e4']
+const ExamContainersStep = lazy(() => import('./exam/ExamContainersStep'))
+const ExamClassesStep = lazy(() => import('./exam/ExamClassesStep'))
+const ExamSubjectsStep = lazy(() => import('./exam/ExamSubjectsStep'))
+const ExamSnapshotStep = lazy(() => import('./exam/ExamSnapshotStep'))
+const ExamScheduleStep = lazy(() => import('./exam/ExamScheduleStep'))
+const ExamAttendanceStep = lazy(() => import('./exam/ExamAttendanceStep'))
+const ExamMarksStep = lazy(() => import('./exam/ExamMarksStep'))
+const ExamResultsStep = lazy(() => import('./exam/ExamResultsStep'))
+const ExamAnnounceStep = lazy(() => import('./exam/ExamAnnounceStep'))
+const ExamAuditStep = lazy(() => import('./exam/ExamAuditStep'))
+const ExamAnalyticsStep = lazy(() => import('./exam/ExamAnalyticsStep'))
+const ExamPageModals = lazy(() => import('./exam/ExamPageModals'))
 
 const emptyLoc = () => ({ ur: '', en: '' })
-
-function col(header, cellFn) {
-  return { key: header, header, cell: cellFn }
-}
-
-function ExamStatusBadge({ status, lng }) {
-  const colors = {
-    draft: 'bg-slate-100 text-slate-700',
-    configured: 'bg-blue-100 text-blue-700',
-    active: 'bg-emerald-100 text-emerald-700',
-    marks_entry: 'bg-amber-100 text-amber-800',
-    processing: 'bg-purple-100 text-purple-700',
-    published: 'bg-teal-100 text-teal-800',
-    closed: 'bg-gray-200 text-gray-600',
-  }
-  return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] || colors.draft}`}>
-      {statusLabel(status, lng)}
-    </span>
-  )
-}
 
 export default function ExamsPage() {
   const { t, i18n } = useTranslation()
@@ -232,7 +195,7 @@ export default function ExamsPage() {
     scopedExamParams && selectedDarjahId
       ? { ...scopedExamParams, darjahId: selectedDarjahId, ...(selectedSectionId ? { sectionId: selectedSectionId } : {}) }
       : null,
-    { skip: !scopedExamParams || !selectedDarjahId }
+    { skip: !scopedExamParams || !selectedDarjahId || !['attendance', 'results', 'marks'].includes(step) }
   )
   const { data: marksData, refetch: refetchMarks } = useGetExamMarksQuery(
     scopedExamParams && selectedDarjahId
@@ -243,7 +206,7 @@ export default function ExamsPage() {
           ...(teacherFilterId ? { teacherId: teacherFilterId } : {}),
         }
       : null,
-    { skip: !scopedExamParams || !selectedDarjahId }
+    { skip: !scopedExamParams || !selectedDarjahId || step !== 'marks' }
   )
   const { data: marksReadinessData } = useGetExamMarksQuery(
     scopedExamParams && selectedDarjahId && step === 'results'
@@ -426,13 +389,6 @@ export default function ExamsPage() {
     })
   }, [subjectMappings, selectedDarjahId, scheduledMappingIdSet, editingScheduleId, scheduleForm.subjectMappingId])
 
-  function formatSubjectKitabLabel(m) {
-    if (!m) return '—'
-    const subject = loc(m.subjectId?.name, lng) || '—'
-    const book = loc(m.bookId?.title, lng)
-    return book ? `${subject} — ${book}` : subject
-  }
-
   const marksHaveUnsavedChanges = useMemo(() => {
     if (!selectedMappingId || !marksEntryEditable) return false
     const list = marksData?.snapshots || snapshots
@@ -603,38 +559,6 @@ export default function ExamsPage() {
       flashError(e)
       throw e
     }
-  }
-
-  function booksForRow(row) {
-    const subjectId = String(row.subjectId?._id || row.subjectId || '')
-    const darjahId = String(selectedDarjahId || '')
-    return books.filter((b) => {
-      if (darjahId && String(b.darjahId?._id || b.darjahId) !== darjahId) return false
-      if (subjectId && String(b.subjectId?._id || b.subjectId) !== subjectId) return false
-      return true
-    })
-  }
-
-  function bookOptionsForRow(row) {
-    const list = booksForRow(row)
-    const currentId = row.bookId?._id || row.bookId
-    if (currentId && !list.some((b) => String(b._id) === String(currentId))) {
-      const embedded = typeof row.bookId === 'object' && row.bookId ? row.bookId : null
-      if (embedded) return [embedded, ...list]
-    }
-    return list
-  }
-
-  function formatExamClasses(row) {
-    const pipes = row.pipelines || []
-    if (!pipes.length) return '—'
-    return pipes
-      .map((p) => {
-        const name = loc(p.darjahId?.name, lng)
-        const code = p.darjahId?.code ? ` (${p.darjahId.code})` : ''
-        return name + code
-      })
-      .join(lng.startsWith('ur') ? '، ' : ', ')
   }
 
   async function handleAddClasses() {
@@ -1364,874 +1288,162 @@ export default function ExamsPage() {
         />
       )}
 
-      {/* STEP 1: Exam Containers */}
-      {step === 'containers' && (
-        <div className="exam-step-box">
-          <p className="exam-step-box__lead">{t('exam.flowGuide')}</p>
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-semibold mb-0">{t('exam.step.containers')}</h2>
-            <button type="button" className="btn btn-primary btn-sm" onClick={openNewExam}>
-              + {t('exam.newExam')}
-            </button>
-          </div>
-          <DataTable
-            isLoading={examsLoading}
-            columns={[
-              col(t('exam.col.name'), (r) => loc(r.name, lng)),
-              col(t('exam.col.type'), (r) => loc(r.examType, lng) || '—'),
-              col(t('exam.col.class'), (r) => formatExamClasses(r)),
-              col(t('exam.col.start'), (r) => formatDisplayDate(r.startDate, lng, mode)),
-              col(t('exam.col.end'), (r) => formatDisplayDate(r.endDate, lng, mode)),
-              col(t('exam.col.status'), (r) => <ExamStatusBadge status={r.status} lng={lng} />),
-              col(t('exam.col.actions'), (r) => (
-                <div className="flex gap-1 flex-wrap">
-                  <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => openEditExam(r)}>
-                    {t('common.edit')}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-primary btn-sm"
-                    onClick={() => {
-                      setSelectedExamId(r._id)
-                      setStep('classes')
-                    }}
-                  >
-                    {t('exam.configure')}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger btn-sm"
-                    onClick={() => {
-                      setDeleteExamReason('')
-                      setDeleteTarget(r)
-                    }}
-                  >
-                    {t('common.delete')}
-                  </button>
-                </div>
-              )),
-            ]}
-            rows={exams}
-          />
-        </div>
-      )}
 
-      {/* STEP 2: Class Pipelines */}
-      {step === 'classes' && selectedExamId && (
-        <div className="exam-step-box">
-          <ExamStepHeader title={`${t('exam.step.classes')} — ${loc(selectedExam?.name, lng)}`} />
-          {examIsLocked && (
-            <div className="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-              <span>{t('exam.lockedBanner')}</span>
-              <button type="button" className="btn btn-warning btn-sm" onClick={() => openUnlockModal('exam')}>
-                {t('exam.unlockExam')}
-              </button>
-            </div>
-          )}
-          {!structureFrozen && (
-          <div className="mb-4 p-3 border rounded">
-            <label className="form-label">{t('exam.addClasses')}</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {darajat
-                .filter((d) => !pipelines.some((p) => String(p.darjahId?._id || p.darjahId) === String(d._id)))
-                .map((d) => (
-                  <AppCheckbox
-                    key={d._id}
-                    id={`class-pick-${d._id}`}
-                    size="sm"
-                    className="text-sm"
-                    label={loc(d.name, lng)}
-                    checked={classPicker.includes(d._id)}
-                    onChange={(e) =>
-                      setClassPicker((prev) =>
-                        e.target.checked ? [...prev, d._id] : prev.filter((id) => id !== d._id)
-                      )
-                    }
-                  />
-                ))}
-            </div>
-            <button type="button" className="btn btn-primary btn-sm" onClick={handleAddClasses} disabled={!classPicker.length}>
-              {t('exam.addSelectedClasses')}
-            </button>
-          </div>
-          )}
-          {structureFrozen && !examIsLocked && (
-            <div className="alert alert-info mb-3">{t('exam.structureFrozen')}</div>
-          )}
-          <DataTable
-            columns={[
-              col(t('exam.col.class'), (r) => loc(r.darjahId?.name, lng)),
-              col(t('exam.col.code'), (r) => r.darjahId?.code || '—'),
-              col(t('exam.col.status'), (r) => <ExamStatusBadge status={r.status} lng={lng} />),
-              col(t('exam.col.actions'), (r) => (
-                <button
-                  type="button"
-                  className="btn btn-outline-danger btn-sm"
-                  disabled={!!r.marksEntryStartedAt}
-                  onClick={() => handleRemoveClassRow(r.darjahId?._id || r.darjahId)}
-                >
-                  {t('exam.remove')}
-                </button>
-              )),
-            ]}
-            rows={pipelines}
-          />
-        </div>
-      )}
-
-      {/* STEP 3: Subject Mapping */}
-      {step === 'subjects' && selectedExamId && selectedDarjahId && (
-        <div className="exam-step-box">
-          {structureFrozen && (
-            <div className="alert alert-info mb-3">{t('exam.structureFrozen')}</div>
-          )}
-          <ExamStepHeader
-            title={t('exam.step.subjects')}
-            actions={
-              <>
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={initSubjectForm} disabled={structureFrozen}>
-                  {t('exam.loadFromDarjah')}
-                </button>
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={addSubjectRow} disabled={structureFrozen}>
-                  {t('exam.addSubjectRow')}
-                </button>
-                <button type="button" className="btn btn-primary btn-sm" onClick={handleSaveSubjects} disabled={structureFrozen}>
-                  {t('common.save')}
-                </button>
-              </>
-            }
-          />
-          {subjectForm.length === 0 && subjectMappings.length > 0 && (
-            <p className="text-sm text-slate-500 mb-2">{t('exam.existingMappings', { count: subjectMappings.length })}</p>
-          )}
-          <div className="data-table-shell content-panel overflow-hidden">
-            <div className="table-responsive">
-              <table className="table data-table exam-subjects-table mb-0 align-middle">
-                <colgroup>
-                  <col className="exam-subjects-table__col exam-subjects-table__col--subject" />
-                  <col className="exam-subjects-table__col exam-subjects-table__col--book" />
-                  <col className="exam-subjects-table__col exam-subjects-table__col--teacher" />
-                  <col className="exam-subjects-table__col exam-subjects-table__col--num" />
-                  <col className="exam-subjects-table__col exam-subjects-table__col--num" />
-                  <col className="exam-subjects-table__col exam-subjects-table__col--num" />
-                  <col className="exam-subjects-table__col exam-subjects-table__col--type" />
-                  <col className="exam-subjects-table__col exam-subjects-table__col--actions" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th className="data-table__th">{t('exam.col.subject')}</th>
-                    <th className="data-table__th">{t('exam.col.book')}</th>
-                    <th className="data-table__th">{t('exam.col.teacher')}</th>
-                    <th className="data-table__th exam-subjects-table__th--num">{t('exam.col.maxMarks')}</th>
-                    <th className="data-table__th exam-subjects-table__th--num">{t('exam.col.passMarks')}</th>
-                    <th className="data-table__th exam-subjects-table__th--num">{t('exam.col.weightage')}</th>
-                    <th className="data-table__th">{t('exam.col.examType')}</th>
-                    <th className="data-table__th">{t('exam.col.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(subjectForm.length ? subjectForm : subjectMappings).map((row, idx) => (
-                    <tr key={row._id || idx} className="data-table__row">
-                      <td className="data-table__td">
-                        <AppSelect
-                          className="w-100"
-                          value={row.subjectId?._id || row.subjectId || ''}
-                          disabled={row.isLocked}
-                          onChange={(e) => {
-                            const v = [...(subjectForm.length ? subjectForm : subjectMappings)]
-                            const subjectId = e.target.value
-                            const matches = books.filter(
-                              (b) =>
-                                String(b.subjectId?._id || b.subjectId) === String(subjectId) &&
-                                String(b.darjahId?._id || b.darjahId) === String(selectedDarjahId)
-                            )
-                            v[idx] = {
-                              ...v[idx],
-                              subjectId,
-                              bookId: matches.length === 1 ? matches[0]._id : '',
-                            }
-                            setSubjectForm(v)
-                          }}
-                        >
-                          <option value="">—</option>
-                          {subjects.map((s) => (
-                            <option key={s._id} value={s._id}>{loc(s.name, lng)}</option>
-                          ))}
-                        </AppSelect>
-                      </td>
-                      <td className="data-table__td">
-                        <AppSelect
-                          className="w-100"
-                          value={row.bookId?._id || row.bookId || ''}
-                          disabled={row.isLocked}
-                          onChange={(e) => {
-                            const v = [...(subjectForm.length ? subjectForm : subjectMappings)]
-                            v[idx] = { ...v[idx], bookId: e.target.value }
-                            setSubjectForm(v)
-                          }}
-                        >
-                          <option value="">—</option>
-                          {bookOptionsForRow(row).map((b) => (
-                            <option key={b._id} value={b._id}>{loc(b.title, lng)}</option>
-                          ))}
-                        </AppSelect>
-                        {!bookOptionsForRow(row).length && row.subjectId && (
-                          <p className="small text-warning mb-0 mt-1">{t('exam.noBooksHint')}</p>
-                        )}
-                      </td>
-                      <td className="data-table__td">
-                        <AppSelect
-                          className="w-100"
-                          value={row.teacherId?._id || row.teacherId || ''}
-                          disabled={row.isLocked}
-                          onChange={(e) => {
-                            const v = [...(subjectForm.length ? subjectForm : subjectMappings)]
-                            v[idx] = { ...v[idx], teacherId: e.target.value }
-                            setSubjectForm(v)
-                          }}
-                        >
-                          <option value="">—</option>
-                          {teachers.map((tc) => (
-                            <option key={tc._id} value={tc._id}>{loc(tc.name, lng)}</option>
-                          ))}
-                        </AppSelect>
-                      </td>
-                      <td className="data-table__td data-table__td--num">
-                        <AppInput
-                          type="number"
-                          className="exam-subjects-table__num"
-                          inputMode="numeric"
-                          min={0}
-                          max={999}
-                          value={row.maxMarks}
-                          disabled={row.isLocked}
-                          onChange={(e) => {
-                            const v = [...(subjectForm.length ? subjectForm : subjectMappings)]
-                            v[idx] = { ...v[idx], maxMarks: Math.min(999, Number(e.target.value) || 0) }
-                            setSubjectForm(v)
-                          }}
-                        />
-                      </td>
-                      <td className="data-table__td data-table__td--num">
-                        <AppInput
-                          type="number"
-                          className="exam-subjects-table__num"
-                          inputMode="numeric"
-                          min={0}
-                          max={999}
-                          value={row.passingMarks}
-                          disabled={row.isLocked}
-                          onChange={(e) => {
-                            const v = [...(subjectForm.length ? subjectForm : subjectMappings)]
-                            v[idx] = { ...v[idx], passingMarks: Math.min(999, Number(e.target.value) || 0) }
-                            setSubjectForm(v)
-                          }}
-                        />
-                      </td>
-                      <td className="data-table__td data-table__td--num">
-                        <AppInput
-                          type="number"
-                          className="exam-subjects-table__num"
-                          inputMode="numeric"
-                          min={0}
-                          max={999}
-                          value={row.weightage ?? 100}
-                          disabled={row.isLocked}
-                          onChange={(e) => {
-                            const v = [...(subjectForm.length ? subjectForm : subjectMappings)]
-                            v[idx] = { ...v[idx], weightage: Math.min(999, Number(e.target.value) || 0) }
-                            setSubjectForm(v)
-                          }}
-                        />
-                      </td>
-                      <td className="data-table__td">
-                        <AppSelect
-                          className="w-100"
-                          value={row.examType || 'written'}
-                          disabled={row.isLocked}
-                          onChange={(e) => {
-                            const v = [...(subjectForm.length ? subjectForm : subjectMappings)]
-                            v[idx] = { ...v[idx], examType: e.target.value }
-                            setSubjectForm(v)
-                          }}
-                        >
-                          {EXAM_SUBJECT_TYPES.map((et) => (
-                            <option key={et} value={et}>{examSubjectTypeLabel(et, lng)}</option>
-                          ))}
-                        </AppSelect>
-                      </td>
-                      <td className="data-table__td">
-                        <div className="data-table__actions">
-                          {row._id && !row.isLocked ? (
-                            <button
-                              type="button"
-                              className="btn btn-outline-danger btn-sm"
-                              disabled={structureFrozen}
-                              onClick={() => setDeleteMappingTarget(row._id)}
-                            >
-                              {t('common.delete')}
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 4: Student Snapshot */}
-      {step === 'snapshot' && selectedExamId && selectedDarjahId && (
-        <div className="exam-step-box">
-          <ExamStepHeader title={t('exam.step.snapshot')} hint={t('exam.snapshotLead')} />
-          {structureFrozen && (
-            <div className="alert alert-info mb-3">{t('exam.structureFrozen')}</div>
-          )}
-          <div className="flex flex-wrap gap-2 mb-3">
-            <button type="button" className="btn btn-primary btn-sm" onClick={handleGenerateSnapshot} disabled={structureFrozen}>
-              {t('exam.generateSnapshot')}
-            </button>
-          </div>
-          <ExamRollAssignPanel
+      <Suspense fallback={<p className="text-secondary py-3">{t('common.loading')}</p>}>
+        {step === 'containers' && (
+          <ExamContainersStep
             lng={lng}
+            mode={mode}
+            exams={exams}
+            examsLoading={examsLoading}
+            onNewExam={openNewExam}
+            onEditExam={openEditExam}
+            onConfigureExam={(id) => {
+              setSelectedExamId(id)
+              setStep('classes')
+            }}
+            onDeleteExam={(r) => {
+              setDeleteExamReason('')
+              setDeleteTarget(r)
+            }}
+          />
+        )}
+
+        {step === 'classes' && selectedExamId && (
+          <ExamClassesStep
+            lng={lng}
+            selectedExam={selectedExam}
+            examIsLocked={examIsLocked}
+            structureFrozen={structureFrozen}
+            darajat={darajat}
+            pipelines={pipelines}
+            classPicker={classPicker}
+            setClassPicker={setClassPicker}
+            onAddClasses={handleAddClasses}
+            onRemoveClass={handleRemoveClassRow}
+            onUnlockExam={() => openUnlockModal('exam')}
+          />
+        )}
+
+        {step === 'subjects' && selectedExamId && selectedDarjahId && (
+          <ExamSubjectsStep
+            lng={lng}
+            structureFrozen={structureFrozen}
+            selectedDarjahId={selectedDarjahId}
+            subjectForm={subjectForm}
+            setSubjectForm={setSubjectForm}
+            subjectMappings={subjectMappings}
+            subjects={subjects}
+            teachers={teachers}
+            books={books}
+            onInitSubjectForm={initSubjectForm}
+            onAddSubjectRow={addSubjectRow}
+            onSaveSubjects={handleSaveSubjects}
+            onDeleteMapping={setDeleteMappingTarget}
+          />
+        )}
+
+        {step === 'snapshot' && selectedExamId && selectedDarjahId && (
+          <ExamSnapshotStep
+            lng={lng}
+            structureFrozen={structureFrozen}
             snapshots={snapshots}
-            sectionFilter={selectedSectionId}
+            selectedSectionId={selectedSectionId}
+            rollSaving={rollSaving}
+            onGenerateSnapshot={handleGenerateSnapshot}
             onSaveRolls={handleSaveRolls}
             onAutoAssign={handleAutoRolls}
-            saving={rollSaving}
           />
-        </div>
-      )}
+        )}
 
-      {/* STEP 5: Date Sheet */}
-      {step === 'schedule' && selectedExamId && (
-        <div className="exam-step-box">
-          <ExamStepHeader title={t('exam.step.schedule')} hint={t('exam.scheduleLead')} />
-          {!selectedDarjahId && (
-            <div className="alert alert-info mb-3">{t('exam.selectClassFirst')}</div>
-          )}
-          {selectedDarjahId && subjectMappings.length === 0 && (
-            <div className="alert alert-warning mb-3">{t('exam.scheduleNoMappings')}</div>
-          )}
-          {selectedDarjahId && (
-            <>
-              {!editingScheduleId && (
-                <div className="mb-3">
-                  <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                    <label className="exam-toolbar__label mb-0">
-                      {t('exam.schedulePickSubjects')}
-                      {scheduleForm.subjectMappingIds?.length > 0 && (
-                        <span className="text-secondary ms-1">
-                          ({scheduleForm.subjectMappingIds.length})
-                        </span>
-                      )}
-                    </label>
-                    <div className="d-flex flex-wrap gap-1">
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm"
-                        disabled={!availableScheduleMappings.length}
-                        onClick={selectAllAvailableScheduleMappings}
-                      >
-                        {t('exam.scheduleSelectAll')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm"
-                        disabled={!scheduleForm.subjectMappingIds?.length}
-                        onClick={clearScheduleMappingSelection}
-                      >
-                        {t('exam.scheduleClearSelection')}
-                      </button>
-                    </div>
-                  </div>
-                  {availableScheduleMappings.length === 0 ? (
-                    <p className="small text-secondary mb-0">{t('exam.scheduleAllMapped')}</p>
-                  ) : (
-                    <div className="exam-schedule-pick-list border rounded p-2">
-                      {availableScheduleMappings.map((m) => {
-                        const id = String(m._id)
-                        const checked = (scheduleForm.subjectMappingIds || []).includes(id)
-                        return (
-                          <label key={id} className="exam-schedule-pick-item d-flex align-items-center gap-2 mb-1">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleScheduleMapping(id)}
-                            />
-                            <span>{formatSubjectKitabLabel(m)}</span>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="exam-toolbar exam-toolbar--form">
-                {editingScheduleId && (
-                  <div className="exam-toolbar__field">
-                    <label className="exam-toolbar__label">{t('exam.col.subject')}</label>
-                    <AppSelect
-                      value={scheduleForm.subjectMappingId}
-                      onChange={(e) => setScheduleForm((f) => ({ ...f, subjectMappingId: e.target.value }))}
-                    >
-                      <option value="">{t('exam.selectSubject')}</option>
-                      {availableScheduleMappings.map((m) => (
-                        <option key={m._id} value={m._id}>{formatSubjectKitabLabel(m)}</option>
-                      ))}
-                    </AppSelect>
-                  </div>
-                )}
-                <div className="exam-toolbar__field">
-                  <label className="exam-toolbar__label">{t('exam.col.date')}</label>
-                  <AppDateInput
-                    value={scheduleForm.examDate}
-                    onChange={(v) => setScheduleForm((f) => ({ ...f, examDate: v }))}
-                  />
-                </div>
-                <div className="exam-toolbar__field exam-toolbar__field--time">
-                  <label className="exam-toolbar__label">{t('exam.col.time')}</label>
-                  <div className="exam-toolbar__time-pair">
-                    <AppInput
-                      type="time"
-                      value={scheduleForm.startTime}
-                      onChange={(e) => setScheduleForm((f) => ({ ...f, startTime: e.target.value }))}
-                    />
-                    <AppInput
-                      type="time"
-                      value={scheduleForm.endTime}
-                      onChange={(e) => setScheduleForm((f) => ({ ...f, endTime: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div className="exam-toolbar__field">
-                  <label className="exam-toolbar__label">{t('exam.col.room')}</label>
-                  <AppInput
-                    type="text"
-                    placeholder={t('exam.col.room')}
-                    value={scheduleForm.room}
-                    onChange={(e) => setScheduleForm((f) => ({ ...f, room: e.target.value }))}
-                  />
-                </div>
-                <div className="exam-toolbar__field">
-                  <label className="exam-toolbar__label">{t('exam.col.supervisor')}</label>
-                  <AppSelect
-                    value={scheduleForm.supervisorId}
-                    onChange={(e) => setScheduleForm((f) => ({ ...f, supervisorId: e.target.value }))}
-                  >
-                    <option value="">{t('exam.col.supervisor')}</option>
-                    {teachers.map((tc) => (
-                      <option key={tc._id} value={tc._id}>{loc(tc.name, lng)}</option>
-                    ))}
-                  </AppSelect>
-                </div>
-                <div className="exam-toolbar__actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    disabled={
-                      !scheduleForm.examDate ||
-                      (editingScheduleId
-                        ? !scheduleForm.subjectMappingId
-                        : !(scheduleForm.subjectMappingIds || []).length)
-                    }
-                    onClick={handleSaveSchedule}
-                  >
-                    {editingScheduleId ? t('exam.updateSchedule') : t('exam.addSchedule')}
-                  </button>
-                  {editingScheduleId && (
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={() => {
-                        setEditingScheduleId(null)
-                        setScheduleForm((f) => ({
-                          ...f,
-                          subjectMappingId: '',
-                          subjectMappingIds: [],
-                        }))
-                      }}
-                    >
-                      {t('common.cancel')}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-          {scheduleConflicts.length > 0 && (
-            <div className="alert alert-warning mb-3">
-              {t('exam.scheduleConflict')}
-              <ul className="mb-0 mt-1 small">
-                {scheduleConflicts.map((c, i) => (
-                  <li key={i}>{c.message || c.type}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <DataTable
-            columns={[
-              col(t('exam.col.subject'), (r) => formatSubjectKitabLabel(r.subjectMappingId)),
-              col(t('exam.col.date'), (r) => formatDisplayDate(r.examDate, lng, mode)),
-              col(t('exam.col.time'), (r) => `${r.startTime || ''} – ${r.endTime || ''}`),
-              col(t('exam.col.class'), (r) => loc(r.darjahId?.name, lng)),
-              col(t('exam.col.section'), (r) => loc(r.sectionId?.name, lng) || '—'),
-              col(t('exam.col.room'), (r) => r.room || '—'),
-              col(t('exam.col.supervisor'), (r) => loc(r.supervisorId?.name, lng) || '—'),
-              col(t('exam.col.actions'), (r) => (
-                <div className="flex gap-1">
-                  <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => startEditSchedule(r)}>
-                    {t('common.edit')}
-                  </button>
-                  <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => setDeleteScheduleTarget(r._id)}>
-                    {t('common.delete')}
-                  </button>
-                </div>
-              )),
-            ]}
-            rows={schedule}
+        {step === 'schedule' && selectedExamId && (
+          <ExamScheduleStep
+            lng={lng}
+            mode={mode}
+            selectedDarjahId={selectedDarjahId}
+            subjectMappings={subjectMappings}
+            schedule={schedule}
+            scheduleForm={scheduleForm}
+            setScheduleForm={setScheduleForm}
+            editingScheduleId={editingScheduleId}
+            setEditingScheduleId={setEditingScheduleId}
+            scheduleConflicts={scheduleConflicts}
+            availableScheduleMappings={availableScheduleMappings}
+            teachers={teachers}
+            onToggleScheduleMapping={toggleScheduleMapping}
+            onSelectAllAvailableScheduleMappings={selectAllAvailableScheduleMappings}
+            onClearScheduleMappingSelection={clearScheduleMappingSelection}
+            onSaveSchedule={handleSaveSchedule}
+            onStartEditSchedule={startEditSchedule}
+            onDeleteSchedule={setDeleteScheduleTarget}
           />
-        </div>
-      )}
+        )}
 
-      {/* STEP 6: Attendance */}
-      {step === 'attendance' && selectedExamId && selectedDarjahId && (
-        <div className="exam-step-box">
-          <ExamStepHeader
-            title={t('exam.step.attendance')}
-            hint={t('exam.attendanceLead')}
-            actions={
-              <>
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={() => openPrintCards(undefined, 'namaz')}
-                >
-                  {t('exam.printNamazSheet')}
-                </button>
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={initAttendanceDraft}>
-                  {t('exam.loadAttendance')}
-                </button>
-                <button type="button" className="btn btn-primary btn-sm" onClick={handleSaveAttendance}>
-                  {t('common.save')}
-                </button>
-              </>
-            }
+        {step === 'attendance' && selectedExamId && selectedDarjahId && (
+          <ExamAttendanceStep
+            lng={lng}
+            attendanceData={attendanceData}
+            snapshots={snapshots}
+            attendanceDraft={attendanceDraft}
+            setAttendanceDraft={setAttendanceDraft}
+            onPrintNamazSheet={() => openPrintCards(undefined, 'namaz')}
+            onInitAttendanceDraft={initAttendanceDraft}
+            onSaveAttendance={handleSaveAttendance}
           />
-          <div className="table-responsive">
-            <table className="table table-sm exam-hazri-table mb-0">
-              <thead>
-                <tr>
-                  <th>{t('exam.col.roll')}</th>
-                  <th>{t('exam.col.student')}</th>
-                  <th>{t('exam.col.attendance')}</th>
-                  <th>{t('exam.salah.fajr')}</th>
-                  <th>{t('exam.salah.zuhr')}</th>
-                  <th>{t('exam.salah.asr')}</th>
-                  <th>{t('exam.salah.maghrib')}</th>
-                  <th>{t('exam.salah.isha')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(attendanceData?.snapshots?.length ? attendanceData.snapshots : snapshots).map((r) => {
-                  const row = attendanceDraft[r._id] || { status: 'present', salahAttendance: {} }
-                  const salah = row.salahAttendance || {}
-                  return (
-                    <tr key={r._id}>
-                      <td>
-                        <span className="exam-roll-cell" dir="ltr" title={r.rollNumber || ''}>
-                          {r.rollNumber || '—'}
-                        </span>
-                      </td>
-                      <td>{loc(r.studentName, lng)}</td>
-                      <td>
-                        <AppSelect
-                          value={row.status || 'present'}
-                          onChange={(e) =>
-                            setAttendanceDraft((d) => ({
-                              ...d,
-                              [r._id]: { ...row, status: e.target.value },
-                            }))
-                          }
-                        >
-                          {EXAM_ATTENDANCE_STATUS.map((st) => (
-                            <option key={st} value={st}>{statusLabel(st, lng)}</option>
-                          ))}
-                        </AppSelect>
-                      </td>
-                      {['fajr', 'zuhr', 'asr', 'maghrib', 'isha'].map((prayer) => (
-                        <td key={prayer}>
-                          <AppSelect
-                            value={salah[prayer] || ''}
-                            onChange={(e) =>
-                              setAttendanceDraft((d) => ({
-                                ...d,
-                                [r._id]: {
-                                  ...row,
-                                  salahAttendance: { ...salah, [prayer]: e.target.value },
-                                },
-                              }))
-                            }
-                          >
-                            <option value="">{t('exam.salah.blank')}</option>
-                            <option value="present">{t('exam.salah.present')}</option>
-                            <option value="absent">{t('exam.salah.absent')}</option>
-                            <option value="excused">{t('exam.salah.excused')}</option>
-                          </AppSelect>
-                        </td>
-                      ))}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* STEP 7: Marks Entry */}
-      {step === 'marks' && selectedExamId && selectedDarjahId && (
-        <div className="exam-step-box">
-          {mappingLocked && (
-            <div className="alert alert-warning py-2 mb-3">
-              {t('exam.subjectLockedHint')}
-              {selectedMappingId && (
-                <button
-                  type="button"
-                  className="btn btn-outline-warning btn-sm ms-2"
-                  onClick={() => openUnlockModal('subject', selectedMappingId)}
-                >
-                  {t('exam.unlockSubject')}
-                </button>
-              )}
-            </div>
-          )}
-          {marksHaveUnsavedChanges && (
-            <div className="alert alert-info py-2 mb-3">
-              {t('exam.marksUnsavedHint')}
-            </div>
-          )}
-          <ExamStepHeader title={t('exam.step.marks')} />
-          <div className="exam-toolbar exam-toolbar--form">
-            <div className="exam-toolbar__field">
-              <label className="exam-toolbar__label">{t('exam.teacherFilter')}</label>
-              <AppSelect
-                value={teacherFilterId}
-                onChange={(e) => setTeacherFilterId(e.target.value)}
-                title={t('exam.teacherFilter')}
-              >
-                <option value="">{t('exam.allTeachers')}</option>
-                {teachers.map((tc) => (
-                  <option key={tc._id} value={tc._id}>{loc(tc.name, lng)}</option>
-                ))}
-              </AppSelect>
-            </div>
-            <div className="exam-toolbar__field exam-toolbar__field--grow">
-              <label className="exam-toolbar__label">{t('exam.selectSubject')}</label>
-              <AppSelect
-                value={selectedMappingId}
-                onChange={(e) => setSelectedMappingId(e.target.value)}
-              >
-                <option value="">{t('exam.selectSubject')}</option>
-                {(marksData?.mappings || subjectMappings).map((m) => (
-                  <option key={m._id} value={m._id}>
-                    {loc(m.subjectId?.name, lng)} ({m.maxMarks})
-                  </option>
-                ))}
-              </AppSelect>
-            </div>
-            <div className="exam-toolbar__actions">
-              <input
-                ref={excelInputRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                className="d-none"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) handleImportMarks(f)
-                  e.target.value = ''
-                }}
-              />
-              <button
-                type="button"
-                className="btn btn-outline-secondary btn-sm"
-                disabled={!selectedMappingId || !marksEntryEditable}
-                title={!marksEntryEditable ? t('exam.subjectLockedHint') : ''}
-                onClick={() => excelInputRef.current?.click()}
-              >
-                {t('exam.importExcel')}
-              </button>
-              <button type="button" className="btn btn-outline-secondary btn-sm" onClick={initMarksDraft}>
-                {t('exam.loadMarks')}
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline-warning btn-sm"
-                disabled={!selectedMappingId}
-                onClick={() => openUnlockModal('subject', selectedMappingId)}
-              >
-                {t('exam.unlockSubject')}
-              </button>
-              <button
-                type="button"
-                className="btn btn-outline-primary btn-sm"
-                disabled={!selectedMappingId || !marksEntryEditable}
-                title={!marksEntryEditable ? t('exam.subjectLockedHint') : ''}
-                onClick={() => handleSaveMarks(false)}
-              >
-                {t('exam.saveDraft')}
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                disabled={!selectedMappingId || !marksEntryEditable}
-                title={!marksEntryEditable ? t('exam.subjectLockedHint') : ''}
-                onClick={() => handleSaveMarks(true)}
-              >
-                {t('exam.submitFinal')}
-              </button>
-            </div>
-          </div>
-          {selectedMappingId && (
-            <DataTable
-              columns={[
-                col(t('exam.col.roll'), (r) => (
-                  <span className="exam-roll-cell" dir="ltr" title={r.rollNumber || ''}>
-                    {r.rollNumber || '—'}
-                  </span>
-                )),
-                col(t('exam.col.student'), (r) => loc(r.studentName, lng)),
-                col(t('exam.col.marks'), (r) => {
-                  const editable = isMarksRowEditable(r._id)
-                  const maxMarks = Number(selectedMapping?.maxMarks) || 100
-                  return (
-                    <AppInput
-                      type="number"
-                      className="w-24"
-                      min={0}
-                      max={maxMarks}
-                      disabled={!editable}
-                      title={!editable ? t('exam.subjectLockedHint') : undefined}
-                      value={marksDraft[r._id] ?? ''}
-                      onChange={(e) => setMarksDraft((d) => ({ ...d, [r._id]: e.target.value }))}
-                    />
-                  )
-                }),
-                col(t('exam.col.actions'), (r) => (
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary btn-sm"
-                      disabled={!isMarksRowEditable(r._id)}
-                      onClick={() => {
-                        setGraceTarget(r)
-                        setGraceForm({ graceMarks: '', reason: '' })
-                      }}
-                    >
-                      {t('exam.grace')}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-outline-warning btn-sm"
-                      onClick={() => openUnlockModal('student', r._id)}
-                    >
-                      {t('exam.unlockStudent')}
-                    </button>
-                  </div>
-                )),
-              ]}
-              rows={marksData?.snapshots || snapshots}
-            />
-          )}
-        </div>
-      )}
+        {step === 'marks' && selectedExamId && selectedDarjahId && (
+          <ExamMarksStep
+            lng={lng}
+            mappingLocked={mappingLocked}
+            marksHaveUnsavedChanges={marksHaveUnsavedChanges}
+            teacherFilterId={teacherFilterId}
+            setTeacherFilterId={setTeacherFilterId}
+            selectedMappingId={selectedMappingId}
+            setSelectedMappingId={setSelectedMappingId}
+            marksData={marksData}
+            subjectMappings={subjectMappings}
+            teachers={teachers}
+            selectedMapping={selectedMapping}
+            marksEntryEditable={marksEntryEditable}
+            marksDraft={marksDraft}
+            setMarksDraft={setMarksDraft}
+            snapshots={snapshots}
+            excelInputRef={excelInputRef}
+            isMarksRowEditable={isMarksRowEditable}
+            onImportMarks={handleImportMarks}
+            onInitMarksDraft={initMarksDraft}
+            onUnlockSubject={(id) => openUnlockModal('subject', id)}
+            onUnlockStudent={(id) => openUnlockModal('student', id)}
+            onSaveMarks={handleSaveMarks}
+            onGraceStudent={(r) => {
+              setGraceTarget(r)
+              setGraceForm({ graceMarks: '', reason: '' })
+            }}
+          />
+        )}
 
-      {step === 'results' && selectedExamId && (
-        <div className="exam-step-box">
-          <ExamStepHeader title={t('exam.step.results')} hint={t('exam.resultsLead')} />
-          {selectedDarjahId && pendingMarksSubjects.length > 0 && (
-            <div className="alert alert-warning mb-3">
-              <p className="mb-2">{t('exam.marksNotReady')}</p>
-              <ul className="mb-0 ps-3">
-                {pendingMarksSubjects.map((row) => (
-                  <li key={row.mapping._id}>
-                    {t('exam.pendingMarksDetail', {
-                      subject: row.subjectName,
-                      submitted: row.submitted,
-                      expected: row.expected,
-                    })}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <div className="flex flex-wrap gap-2 mb-3 exam-results-actions">
-            {selectedDarjahId && (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  disabled={!marksReadyForProcess}
-                  title={!marksReadyForProcess ? t('exam.marksNotReady') : undefined}
-                  onClick={() => setConfirmProcessOpen(true)}
-                >
-                  {t('exam.processResults')}
-                </button>
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={handleExportResults}>
-                  {t('exam.exportCsv')}
-                </button>
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => openPrintCards(undefined, 'cards')}>
-                  {t('exam.printBulk')}
-                </button>
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => openPrintCards(undefined, 'roll')}>
-                  {t('exam.printRollSheet')}
-                </button>
-                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => openPrintCards(undefined, 'namaz')}>
-                  {t('exam.printNamazSheet')}
-                </button>
-              </>
-            )}
-          </div>
-          {selectedDarjahId && sectionsForDarjah.length > 0 && (
-            <div className="exam-segment">
-              <button
-                type="button"
-                className={`btn btn-sm ${!selectedSectionId ? 'btn-primary' : 'btn-outline-secondary'}`}
-                onClick={() => setSelectedSectionId('')}
-              >
-                {t('exam.combined')}
-              </button>
-              {sectionsForDarjah.map((s) => (
-                <button
-                  key={s._id}
-                  type="button"
-                  className={`btn btn-sm ${selectedSectionId === s._id ? 'btn-primary' : 'btn-outline-secondary'}`}
-                  onClick={() => setSelectedSectionId(s._id)}
-                >
-                  {loc(s.name, lng)}
-                </button>
-              ))}
-            </div>
-          )}
-          {selectedDarjahId ? (
-            matrixLoading ? (
-              <p className="text-secondary">{t('common.loading')}</p>
-            ) : (
-              <ExamResultMatrix data={resultMatrix} lng={lng} />
-            )
-          ) : (
-            <p className="text-secondary">{t('exam.selectClassForMatrix')}</p>
-          )}
-        </div>
-      )}
+        {step === 'results' && selectedExamId && (
+          <ExamResultsStep
+            lng={lng}
+            selectedDarjahId={selectedDarjahId}
+            selectedSectionId={selectedSectionId}
+            setSelectedSectionId={setSelectedSectionId}
+            pendingMarksSubjects={pendingMarksSubjects}
+            marksReadyForProcess={marksReadyForProcess}
+            matrixLoading={matrixLoading}
+            resultMatrix={resultMatrix}
+            sectionsForDarjah={sectionsForDarjah}
+            onConfirmProcess={() => setConfirmProcessOpen(true)}
+            onExportResults={handleExportResults}
+            onPrintBulk={() => openPrintCards(undefined, 'cards')}
+            onPrintRollSheet={() => openPrintCards(undefined, 'roll')}
+            onPrintNamazSheet={() => openPrintCards(undefined, 'namaz')}
+          />
+        )}
 
-      {step === 'announce' && selectedExamId && (
-        <div className="exam-step-box">
-          <ExamStepHeader title={t('exam.step.announce')} hint={t('exam.announceLead')} />
-          <ExamAnnouncePanel
+        {step === 'announce' && selectedExamId && (
+          <ExamAnnounceStep
             lng={lng}
             snapshots={snapshots}
             publishStudentId={publishStudentId}
@@ -2249,361 +1461,56 @@ export default function ExamsPage() {
             hasUnpublishedResults={hasUnpublishedResults}
             onProcessResults={() => setConfirmProcessOpen(true)}
           />
-        </div>
-      )}
+        )}
 
-      {step === 'audit' && selectedExamId && (
-        <div className="exam-step-box">
-          <ExamStepHeader title={t('exam.step.audit')} hint={t('exam.auditHint')} />
-          <ExamAuditPanel logs={auditLogs} loading={auditLoading} />
-        </div>
-      )}
+        {step === 'audit' && selectedExamId && (
+          <ExamAuditStep auditLogs={auditLogs} auditLoading={auditLoading} />
+        )}
 
-      {/* Analytics */}
-      {step === 'analytics' && selectedExamId && analytics && (
-        <div className="exam-step-box">
-          <ExamStepHeader title={t('exam.step.analytics')} />
-          <AppKpiCards
-            items={[
-              { key: 'students', value: analytics.summary?.totalStudents ?? 0, label: t('exam.analytics.students'), tone: 'teal' },
-              { key: 'avg', value: `${analytics.summary?.avgPercentage ?? 0}%`, label: t('exam.analytics.avgPct'), tone: 'blue' },
-              { key: 'pass', value: `${analytics.summary?.passRate ?? 0}%`, label: t('exam.analytics.passRate'), tone: 'emerald' },
-              { key: 'fail', value: analytics.summary?.failCount ?? 0, label: t('exam.analytics.failures'), tone: 'rose' },
-            ]}
-          />
-          {analytics.classPerformance?.length > 0 && (
-            <div className="exam-analytics-chart mb-4" style={{ height: '16rem' }}>
-              <h3 className="exam-analytics-chart__title">{t('exam.analytics.classPerf')}</h3>
-              <ResponsiveContainer width="100%" height="85%">
-                <BarChart data={analytics.classPerformance.map((c) => ({
-                  name: darajat.find((d) => String(d._id) === String(c.darjahId))?.code || c.darjahId?.slice(-4),
-                  avg: c.avgPercentage,
-                  pass: c.passRate,
-                }))}>
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="avg" fill={CHART_COL[0]} name={t('exam.analytics.avgPct')} />
-                  <Bar dataKey="pass" fill={CHART_COL[1]} name={t('exam.analytics.passRate')} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-          {analytics.weakSubjects?.length > 0 && (
-            <div className="exam-analytics-list">
-              <h3 className="exam-analytics-chart__title">{t('exam.analytics.weakSubjects')}</h3>
-              <ul>
-                {analytics.weakSubjects.map((ws) => (
-                  <li key={ws.subjectId}>
-                    {loc(subjects.find((s) => String(s._id) === String(ws.subjectId))?.name, lng) || ws.subjectId}
-                    {' — '}{t('exam.analytics.passRate')}: {ws.passRate}%
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
+        {step === 'analytics' && selectedExamId && analytics && (
+          <ExamAnalyticsStep lng={lng} analytics={analytics} darajat={darajat} subjects={subjects} />
+        )}
+      </Suspense>
 
-      {graceTarget && (
-        <AppModalShell onClose={() => setGraceTarget(null)} title={t('exam.graceTitle')}>
-          <form
-            className="modal-app-form"
-            onSubmit={(e) => {
-              e.preventDefault()
-              handleApplyGrace()
-            }}
-          >
-            <div className="modal-app-body">
-              <p className="small text-secondary mb-2">
-                {loc(graceTarget.studentName, lng)} — {graceTarget.rollNumber}
-              </p>
-              <div className="mb-2">
-                <FormField label={t('exam.graceMarks')} htmlFor="grace-marks">
-                  <AppInput
-                    id="grace-marks"
-                    type="number"
-                    min={0}
-                    value={graceForm.graceMarks}
-                    onChange={(e) => setGraceForm((f) => ({ ...f, graceMarks: e.target.value }))}
-                    required
-                  />
-                </FormField>
-              </div>
-              <div className="mb-2">
-                <FormField label={t('exam.audit.reason')} htmlFor="grace-reason">
-                  <AppInput
-                    id="grace-reason"
-                    type="text"
-                    value={graceForm.reason}
-                    onChange={(e) => setGraceForm((f) => ({ ...f, reason: e.target.value }))}
-                    required
-                  />
-                </FormField>
-              </div>
-            </div>
-            <div className="modal-app-footer d-flex flex-wrap gap-2 justify-content-end">
-              <button type="button" className="btn btn-outline-secondary" onClick={() => setGraceTarget(null)}>
-                {t('common.cancel')}
-              </button>
-              <button type="submit" className="btn btn-primary">{t('common.save')}</button>
-            </div>
-          </form>
-        </AppModalShell>
-      )}
-
-      {examModal && (
-        <AppModalShell
-          onClose={() => setExamModal(false)}
-          title={editingExam ? t('exam.editExam') : t('exam.newExam')}
-        >
-          <form
-            className="modal-app-form"
-            onSubmit={(e) => {
-              e.preventDefault()
-              handleSaveExam()
-            }}
-          >
-            <div className="modal-app-body">
-              <FormRow className="app-form-row--2">
-                <FormField k="examNameUr" htmlFor="ex-u" langField="ur" col={6}>
-                  <AppInput
-                    id="ex-u"
-                    value={examForm.name.ur}
-                    onChange={(e) => setExamForm((f) => ({ ...f, name: { ...f.name, ur: e.target.value } }))}
-                    dir="rtl"
-                  />
-                </FormField>
-                <FormField k="examNameEn" htmlFor="ex-e" langField="en" col={6}>
-                  <AppInput
-                    id="ex-e"
-                    latin
-                    value={examForm.name.en}
-                    onChange={(e) => setExamForm((f) => ({ ...f, name: { ...f.name, en: e.target.value } }))}
-                  />
-                </FormField>
-              </FormRow>
-              {examForm.examTypeIndex === '' ? (
-                <>
-                  <FormRow className="app-form-row--2">
-                    <FormField label={t('exam.col.type')} htmlFor="ex-type" col={6}>
-                      <AppSelect
-                        id="ex-type"
-                        value={examForm.examTypeIndex}
-                        onChange={(e) => setExamForm((f) => ({ ...f, examTypeIndex: e.target.value }))}
-                      >
-                        <option value="">{t('exam.customType')}</option>
-                        {examNames.map((en, i) => (
-                          <option key={i} value={i}>{loc(en, lng)}</option>
-                        ))}
-                      </AppSelect>
-                    </FormField>
-                    <FormField k="examTypeCustomUr" htmlFor="ex-tu" langField="ur" col={6}>
-                      <AppInput
-                        id="ex-tu"
-                        value={examForm.customExamType.ur}
-                        onChange={(e) => setExamForm((f) => ({
-                          ...f,
-                          customExamType: { ...f.customExamType, ur: e.target.value },
-                        }))}
-                        dir="rtl"
-                        placeholder={t('exam.customTypePlaceholder')}
-                      />
-                    </FormField>
-                  </FormRow>
-                  <FormRow className="app-form-row--2">
-                    <FormField k="examTypeCustomEn" htmlFor="ex-te" langField="en" col={6}>
-                      <AppInput
-                        id="ex-te"
-                        latin
-                        value={examForm.customExamType.en}
-                        onChange={(e) => setExamForm((f) => ({
-                          ...f,
-                          customExamType: { ...f.customExamType, en: e.target.value },
-                        }))}
-                        placeholder={t('exam.customTypePlaceholder')}
-                      />
-                    </FormField>
-                  </FormRow>
-                </>
-              ) : (
-                <FormRow>
-                  <FormField label={t('exam.col.type')} htmlFor="ex-type" col={12}>
-                    <AppSelect
-                      id="ex-type"
-                      value={examForm.examTypeIndex}
-                      onChange={(e) => setExamForm((f) => ({ ...f, examTypeIndex: e.target.value }))}
-                    >
-                      <option value="">{t('exam.customType')}</option>
-                      {examNames.map((en, i) => (
-                        <option key={i} value={i}>{loc(en, lng)}</option>
-                      ))}
-                    </AppSelect>
-                  </FormField>
-                </FormRow>
-              )}
-              <FormRow className="app-form-row--2">
-                <FormField label={t('exam.col.start')} htmlFor="ex-start" col={6}>
-                  <AppDateInput id="ex-start" value={examForm.startDate} onChange={(v) => setExamForm((f) => ({ ...f, startDate: v }))} />
-                </FormField>
-                <FormField label={t('exam.col.end')} htmlFor="ex-end" col={6}>
-                  <AppDateInput id="ex-end" value={examForm.endDate} onChange={(v) => setExamForm((f) => ({ ...f, endDate: v }))} />
-                </FormField>
-              </FormRow>
-              <FormRow>
-                <FormField label={t('exam.col.resultDate')} htmlFor="ex-result-date" col={12}>
-                  <AppDateInput
-                    id="ex-result-date"
-                    value={examForm.resultPublicationDate}
-                    onChange={(v) => setExamForm((f) => ({ ...f, resultPublicationDate: v }))}
-                  />
-                </FormField>
-              </FormRow>
-            </div>
-            <div className="modal-app-footer d-flex flex-wrap gap-2 justify-content-end">
-              <button type="button" className="btn btn-outline-secondary" onClick={() => setExamModal(false)}>
-                {t('common.cancel')}
-              </button>
-              <button type="submit" className="btn btn-primary">
-                {t('common.save')}
-              </button>
-            </div>
-          </form>
-        </AppModalShell>
-      )}
-
-      {deleteTarget && (
-        <AppModalShell
-          onClose={() => { setDeleteTarget(null); setDeleteExamReason('') }}
-          title={t('exam.deleteTitle')}
-        >
-          <form
-            className="modal-app-form"
-            onSubmit={(e) => {
-              e.preventDefault()
-              handleDeleteExam().then(() => {}).catch(() => {})
-            }}
-          >
-            <div className="modal-app-body">
-              <p className="small text-secondary mb-2">
-                {t('exam.confirmDelete', { name: loc(deleteTarget.name, lng) })}
-              </p>
-              <p className="small text-danger mb-2">{t('exam.deleteCascadeNote')}</p>
-              <p className="small text-secondary mb-2">{t('exam.deleteAuditNote')}</p>
-              <FormField label={t('exam.deleteReasonLabel')} htmlFor="delete-exam-reason">
-                <AppInput
-                  id="delete-exam-reason"
-                  type="text"
-                  value={deleteExamReason}
-                  onChange={(e) => setDeleteExamReason(e.target.value)}
-                  placeholder={t('exam.deleteReasonPlaceholder')}
-                  required
-                  minLength={10}
-                  autoFocus
-                />
-              </FormField>
-            </div>
-            <div className="modal-app-footer d-flex flex-wrap gap-2 justify-content-end">
-              <button
-                type="button"
-                className="btn btn-outline-secondary"
-                onClick={() => { setDeleteTarget(null); setDeleteExamReason('') }}
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="submit"
-                className="btn btn-danger"
-                disabled={deleteExamReason.trim().length < 10}
-              >
-                {t('common.delete')}
-              </button>
-            </div>
-          </form>
-        </AppModalShell>
-      )}
-
-      <ConfirmDeleteModal
-        open={!!deleteScheduleTarget}
-        title={t('common.confirmDeleteTitle')}
-        message={t('exam.confirmDeleteSchedule')}
-        onClose={() => setDeleteScheduleTarget(null)}
-        onConfirm={handleDeleteSchedule}
-      />
-
-      <ConfirmDeleteModal
-        open={!!deleteMappingTarget}
-        title={t('common.confirmDeleteTitle')}
-        message={t('exam.confirmDeleteMapping')}
-        onClose={() => setDeleteMappingTarget(null)}
-        onConfirm={handleDeleteSubjectMapping}
-      />
-
-      <ConfirmActionModal
-        open={confirmProcessOpen}
-        title={t('exam.processResults')}
-        message={t('exam.confirmProcessResults')}
-        confirmLabel={t('exam.processResults')}
-        onClose={() => setConfirmProcessOpen(false)}
-        onConfirm={handleProcessResults}
-      />
-
-      <ConfirmActionModal
-        open={!!confirmPublish}
-        title={t('exam.announceTitle')}
-        message={
-          confirmPublish?.level === 'exam'
-            ? t('exam.confirmPublishExam')
-            : t('exam.confirmPublishLevel', { level: t(`exam.publish.${confirmPublish?.level}`) })
-        }
-        confirmLabel={t('common.confirm')}
-        confirmVariant="success"
-        onClose={() => setConfirmPublish(null)}
-        onConfirm={handlePublish}
-      />
-
-      {unlockModal && (
-        <AppModalShell
-          onClose={closeUnlockModal}
-          title={
-            unlockModal.scope === 'exam'
-              ? t('exam.unlockExam')
-              : unlockModal.scope === 'subject'
-                ? t('exam.unlockSubject')
-                : t('exam.unlockStudent')
-          }
-        >
-          <form
-            className="modal-app-form"
-            onSubmit={(e) => {
-              e.preventDefault()
-              handleUnlockSubmit().then(() => closeUnlockModal()).catch(() => {})
-            }}
-          >
-            <div className="modal-app-body">
-              <FormField label={t('exam.unlockReasonPrompt')} htmlFor="unlock-reason">
-                <AppInput
-                  id="unlock-reason"
-                  type="text"
-                  value={unlockReason}
-                  onChange={(e) => setUnlockReason(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </FormField>
-            </div>
-            <div className="modal-app-footer d-flex flex-wrap gap-2 justify-content-end">
-              <button type="button" className="btn btn-outline-secondary" onClick={closeUnlockModal}>
-                {t('common.cancel')}
-              </button>
-              <button type="submit" className="btn btn-warning" disabled={!unlockReason.trim()}>
-                {t('common.confirm')}
-              </button>
-            </div>
-          </form>
-        </AppModalShell>
-      )}
+      <Suspense fallback={null}>
+        <ExamPageModals
+          lng={lng}
+          examNames={examNames}
+          graceTarget={graceTarget}
+          setGraceTarget={setGraceTarget}
+          graceForm={graceForm}
+          setGraceForm={setGraceForm}
+          onApplyGrace={handleApplyGrace}
+          examModal={examModal}
+          setExamModal={setExamModal}
+          editingExam={editingExam}
+          examForm={examForm}
+          setExamForm={setExamForm}
+          onSaveExam={handleSaveExam}
+          deleteTarget={deleteTarget}
+          setDeleteTarget={setDeleteTarget}
+          deleteExamReason={deleteExamReason}
+          setDeleteExamReason={setDeleteExamReason}
+          onDeleteExam={handleDeleteExam}
+          deleteScheduleTarget={deleteScheduleTarget}
+          setDeleteScheduleTarget={setDeleteScheduleTarget}
+          onDeleteSchedule={handleDeleteSchedule}
+          deleteMappingTarget={deleteMappingTarget}
+          setDeleteMappingTarget={setDeleteMappingTarget}
+          onDeleteSubjectMapping={handleDeleteSubjectMapping}
+          confirmProcessOpen={confirmProcessOpen}
+          setConfirmProcessOpen={setConfirmProcessOpen}
+          onProcessResults={handleProcessResults}
+          confirmPublish={confirmPublish}
+          setConfirmPublish={setConfirmPublish}
+          onPublish={handlePublish}
+          unlockModal={unlockModal}
+          unlockReason={unlockReason}
+          setUnlockReason={setUnlockReason}
+          onCloseUnlockModal={closeUnlockModal}
+          onUnlockSubmit={handleUnlockSubmit}
+        />
+      </Suspense>
     </div>
   )
 }

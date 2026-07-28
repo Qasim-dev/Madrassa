@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Outlet, createBrowserRouter, createRoutesFromElements, Route } from 'react-router-dom'
 import RequireAuth from './components/RequireAuth'
 import RequirePermission from './components/RequirePermission'
 import MainLayout from './layouts/MainLayout'
@@ -59,145 +59,152 @@ function Guard({ permission, children }) {
   )
 }
 
-export default function App() {
+/** Data-router shell so hooks like useBlocker work on form pages. */
+function AppShell() {
   return (
     <ErrorBoundary>
       <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/id-cards/verify/:token" element={<IdCardVerifyPage />} />
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <MainLayout />
-              </RequireAuth>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="students/new" element={<StudentFormPage />} />
-            <Route path="students/print-cards" element={<StudentsBulkPrintPage />} />
-            <Route path="students/:id/print" element={<StudentPrintPage />} />
-            <Route path="students/:id/edit" element={<StudentFormPage />} />
-            <Route path="students" element={<StudentsPage />} />
-            <Route path="id-cards" element={<IdCardsPage />} />
-            <Route path="id-cards/print" element={<IdCardsPrintPage />} />
-            <Route path="id-cards/templates" element={<IdCardsTemplatesPage />} />
-            <Route path="id-cards/history" element={<IdCardsHistoryPage />} />
-            <Route path="teachers" element={<TeachersPage />} />
-            <Route
-              path="teachers/new"
-              element={
-                <Guard permission="teachers:write">
-                  <TeacherFormPage />
-                </Guard>
-              }
-            />
-            <Route
-              path="teachers/:id/edit"
-              element={
-                <Guard permission="teachers:write">
-                  <TeacherFormPage />
-                </Guard>
-              }
-            />
-            <Route
-              path="grades"
-              element={
-                <Guard permission="grades:write">
-                  <GradesPage />
-                </Guard>
-              }
-            />
-            <Route path="attendance" element={<AttendancePage />} />
-            <Route path="student-character" element={<StudentCharacterPage />} />
-            <Route path="exams" element={<ExamsPage />} />
-            <Route path="exams/print" element={<ExamResultPrintPage />} />
-            <Route
-              path="fees"
-              element={
-                <Guard permission="fees:read">
-                  <FeesPage />
-                </Guard>
-              }
-            />
-            <Route
-              path="finance"
-              element={
-                <Guard permission="finance:read">
-                  <FinancePage />
-                </Guard>
-              }
-            />
-            <Route path="inventory" element={<InventoryPage />} />
-            <Route path="library" element={<LibraryPage />} />
-            <Route path="speeches" element={<SpeechesPage />} />
-            <Route
-              path="settings"
-              element={
-                <Guard permission="settings:write">
-                  <SettingsPage />
-                </Guard>
-              }
-            />
-            <Route
-              path="users"
-              element={
-                <Guard permission="users:manage">
-                  <UsersPage />
-                </Guard>
-              }
-            />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route
-              path="tartibat/sessions"
-              element={
-                <Guard permission="tartibat:write">
-                  <TartibatSessionsPage />
-                </Guard>
-              }
-            />
-            <Route
-              path="tartibat/subjects"
-              element={
-                <Guard permission="tartibat:write">
-                  <TartibatSubjectsPage />
-                </Guard>
-              }
-            />
-            <Route
-              path="tartibat/darajat"
-              element={
-                <Guard permission="tartibat:write">
-                  <TartibatDarajatPage />
-                </Guard>
-              }
-            />
-            <Route
-              path="tartibat/books"
-              element={
-                <Guard permission="tartibat:write">
-                  <TartibatBooksPage />
-                </Guard>
-              }
-            />
-            <Route path="book-reading" element={<BookReadingPage />} />
-            <Route path="book-reading/:bookId" element={<BookReadingDetailPage />} />
-            <Route
-              path="tartibat/timetable"
-              element={
-                <Guard permission="tartibat:write">
-                  <TartibatTimetablePage />
-                </Guard>
-              }
-            />
-          </Route>
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <Outlet />
       </Suspense>
     </ErrorBoundary>
   )
 }
+
+export const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route element={<AppShell />}>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/id-cards/verify/:token" element={<IdCardVerifyPage />} />
+      <Route
+        path="/"
+        element={
+          <RequireAuth>
+            <MainLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="students/new" element={<StudentFormPage />} />
+        <Route path="students/print-cards" element={<StudentsBulkPrintPage />} />
+        <Route path="students/:id/print" element={<StudentPrintPage />} />
+        <Route path="students/:id/edit" element={<StudentFormPage />} />
+        <Route path="students" element={<StudentsPage />} />
+        <Route path="id-cards" element={<IdCardsPage />} />
+        <Route path="id-cards/print" element={<IdCardsPrintPage />} />
+        <Route path="id-cards/templates" element={<IdCardsTemplatesPage />} />
+        <Route path="id-cards/history" element={<IdCardsHistoryPage />} />
+        <Route path="teachers" element={<TeachersPage />} />
+        <Route
+          path="teachers/new"
+          element={
+            <Guard permission="teachers:write">
+              <TeacherFormPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="teachers/:id/edit"
+          element={
+            <Guard permission="teachers:write">
+              <TeacherFormPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="grades"
+          element={
+            <Guard permission="grades:write">
+              <GradesPage />
+            </Guard>
+          }
+        />
+        <Route path="attendance" element={<AttendancePage />} />
+        <Route path="student-character" element={<StudentCharacterPage />} />
+        <Route path="exams" element={<ExamsPage />} />
+        <Route path="exams/print" element={<ExamResultPrintPage />} />
+        <Route
+          path="fees"
+          element={
+            <Guard permission="fees:read">
+              <FeesPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="finance"
+          element={
+            <Guard permission="finance:read">
+              <FinancePage />
+            </Guard>
+          }
+        />
+        <Route path="inventory" element={<InventoryPage />} />
+        <Route path="library" element={<LibraryPage />} />
+        <Route path="speeches" element={<SpeechesPage />} />
+        <Route
+          path="settings"
+          element={
+            <Guard permission="settings:write">
+              <SettingsPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="users"
+          element={
+            <Guard permission="users:manage">
+              <UsersPage />
+            </Guard>
+          }
+        />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route
+          path="tartibat/sessions"
+          element={
+            <Guard permission="tartibat:write">
+              <TartibatSessionsPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="tartibat/subjects"
+          element={
+            <Guard permission="tartibat:write">
+              <TartibatSubjectsPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="tartibat/darajat"
+          element={
+            <Guard permission="tartibat:write">
+              <TartibatDarajatPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="tartibat/books"
+          element={
+            <Guard permission="tartibat:write">
+              <TartibatBooksPage />
+            </Guard>
+          }
+        />
+        <Route path="book-reading" element={<BookReadingPage />} />
+        <Route path="book-reading/:bookId" element={<BookReadingDetailPage />} />
+        <Route
+          path="tartibat/timetable"
+          element={
+            <Guard permission="tartibat:write">
+              <TartibatTimetablePage />
+            </Guard>
+          }
+        />
+      </Route>
+      <Route path="*" element={<NotFoundPage />} />
+    </Route>
+  )
+)
