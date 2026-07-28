@@ -27,6 +27,7 @@ const menuGroups = [
       { to: '/tartibat/sessions', navKey: 'navTartibatSessions', icon: 'tartibat' },
       { to: '/tartibat/subjects', navKey: 'navTartibatSubjects', icon: 'tartibat' },
       { to: '/tartibat/darajat', navKey: 'navTartibatDarajat', icon: 'tartibat' },
+      { to: '/grades', navKey: 'navGrades', icon: 'grades' },
       { to: '/tartibat/books', navKey: 'navTartibatBooks', icon: 'tartibat' },
       { to: '/book-reading', navKey: 'navBookReading', icon: 'tartibat' },
       { to: '/speeches', navKey: 'navSpeeches', icon: 'speeches' },
@@ -82,6 +83,7 @@ const menuGroups = [
     labelKey: 'groupSystem',
     icon: 'settings',
     items: [
+      { to: '/settings', navKey: 'navSettings', icon: 'settings' },
       { to: '/profile', navKey: 'navProfile', icon: 'profile' },
     ],
   },

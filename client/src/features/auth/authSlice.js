@@ -1,10 +1,40 @@
 import { createSlice } from '@reduxjs/toolkit'
 
-const tokenFromStorage = () =>
-  typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+const TOKEN_KEY = 'token'
+
+function readStoredToken() {
+  if (typeof window === 'undefined') return null
+  try {
+    return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+function clearStoredToken() {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(TOKEN_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+function writeStoredToken(token, remember) {
+  if (typeof window === 'undefined') return
+  clearStoredToken()
+  if (!token) return
+  try {
+    const store = remember ? localStorage : sessionStorage
+    store.setItem(TOKEN_KEY, token)
+  } catch {
+    /* ignore */
+  }
+}
 
 const initialState = {
-  token: tokenFromStorage(),
+  token: readStoredToken(),
   user: null,
 }
 
@@ -15,9 +45,8 @@ const authSlice = createSlice({
     setCredentials(state, action) {
       state.token = action.payload.token
       state.user = action.payload.user
-      if (action.payload.token) {
-        localStorage.setItem('token', action.payload.token)
-      }
+      const remember = action.payload.remember !== false
+      writeStoredToken(action.payload.token, remember)
     },
     setUser(state, action) {
       const patch = action.payload
@@ -35,7 +64,7 @@ const authSlice = createSlice({
     logout(state) {
       state.token = null
       state.user = null
-      localStorage.removeItem('token')
+      clearStoredToken()
     },
   },
 })

@@ -195,7 +195,7 @@ export default function LoginPage() {
     e.preventDefault()
     try {
       const data = await login({ email: email.trim(), password }).unwrap()
-      dispatch(setCredentials({ token: data.token, user: data.user }))
+      dispatch(setCredentials({ token: data.token, user: data.user, remember }))
     } catch {
       /* handled */
     }

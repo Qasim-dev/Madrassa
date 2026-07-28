@@ -335,6 +335,8 @@ export default function ProfilePage() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={8}
+                  required
                 />
               </FormField>
             </FormRow>

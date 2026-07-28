@@ -46,6 +46,10 @@ export default function SignupPage() {
     if (password !== confirmPassword) {
       return
     }
+    if (String(password).length < 8) {
+      setFormError(t('auth.passwordTooShort'))
+      return
+    }
     try {
       const data = await register({
         nameUr: nameUr.trim(),
@@ -53,7 +57,7 @@ export default function SignupPage() {
         email: email.trim(),
         password,
       }).unwrap()
-      dispatch(setCredentials({ token: data.token, user: data.user }))
+      dispatch(setCredentials({ token: data.token, user: data.user, remember: true }))
     } catch {
       /* handled */
     }
@@ -136,6 +140,7 @@ export default function SignupPage() {
                 className="rounded-3 border-secondary-subtle"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                minLength={8}
                 autoComplete="new-password"
               />
             </div>
@@ -147,6 +152,7 @@ export default function SignupPage() {
                 className="rounded-3 border-secondary-subtle"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                minLength={8}
                 autoComplete="new-password"
               />
             </div>
