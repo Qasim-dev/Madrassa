@@ -10,6 +10,7 @@ import { INV_CATEGORIES, INV_UNITS } from '../constants/inventoryEnums.js';
 import { EXPENSE_CATEGORIES, FUND_SOURCES } from '../constants/financeEnums.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { withMongoTransaction, sessionOpts } from '../utils/mongoTransaction.js';
 
 const router = Router();
 
@@ -411,15 +412,8 @@ router.post('/movements', requirePermission('inventory:write'), async (req, res,
     const kind = inEnum(b.kind, ['entry', 'exit', 'registration'], 'entry');
     const itemId = b.itemId;
     const q = Number(b.quantity);
-    const item = await InventoryItem.findOne({ _id: itemId, tenantId: req.tenantId });
-    if (!item) {
-      return res.status(404).json({ message: 'Item not found' });
-    }
     if (!Number.isFinite(q) || q <= 0) {
       return res.status(400).json({ message: 'Invalid quantity' });
-    }
-    if ((kind === 'exit' || kind === 'registration') && (Number(item.quantity) || 0) < q) {
-      return res.status(400).json({ message: 'Insufficient stock' });
     }
 
     const movementDate = b.date ? new Date(b.date) : new Date();
@@ -430,83 +424,115 @@ router.post('/movements', requirePermission('inventory:write'), async (req, res,
       b.responsiblePerson && typeof b.responsiblePerson === 'object' ? b.responsiblePerson : {};
     const supplier = b.supplier && typeof b.supplier === 'object' ? b.supplier : {};
     const notes = b.notes && typeof b.notes === 'object' ? b.notes : {};
-
-    if (kind === 'entry') {
-      item.quantity += q;
-      item.received += q;
-      item.purchased += q;
-    } else if (kind === 'exit') {
-      item.quantity -= q;
-      item.used += q;
-    } else if (kind === 'registration') {
-      if (reason === 'damage') item.damaged += q;
-      else if (reason === 'usage') item.used += q;
-      item.quantity -= q;
-    }
-    await item.save();
-
-    const mov = await StockMovement.create({
-      tenantId: req.tenantId,
-      sessionId: item.sessionId || null,
-      kind,
-      movementFlow: movementFlowVal || undefined,
-      itemId: item._id,
-      quantity: q,
-      date: movementDate,
-      reason: kind === 'registration' ? reason || '' : '',
-      supplier,
-      notes,
-      usageLocation,
-      responsiblePerson,
-      fromLocation: String(b.fromLocation || '').slice(0, 200),
-      toLocation: String(b.toLocation || '').slice(0, 200),
-      department: String(b.department || '').slice(0, 120),
-      referenceNo: String(b.referenceNo || '').slice(0, 120),
-      purchaseUnitCost: Math.max(0, Number(b.purchaseUnitCost) || 0),
-      status: inEnum(b.status, ['posted', 'pending'], 'posted'),
-    });
-
     const createFinanceExpense = b.createFinanceExpense === true || b.createFinanceExpense === 'true';
     const totalPurchaseCost = Number(b.totalPurchaseCost);
-    let financeTx = null;
-    if (createFinanceExpense && kind === 'entry' && Number.isFinite(totalPurchaseCost) && totalPurchaseCost > 0) {
-      const expCat = inEnum(b.purchaseExpenseCategory, EXPENSE_CATEGORIES, 'ration');
-      const fundSrc = inEnum(b.purchaseFundSource, FUND_SOURCES, 'general');
-      const accountId =
-        b.accountId && mongoose.isValidObjectId(String(b.accountId)) ? String(b.accountId) : null;
-      const titleUr = String(b.expenseTitleUr || item.name?.ur || 'اسٹاک خریداری');
-      const titleEn = String(b.expenseTitleEn || item.name?.en || 'Stock purchase');
-      financeTx = await Transaction.create({
-        tenantId: req.tenantId,
-        sessionId: item.sessionId || undefined,
-        accountId: accountId || undefined,
-        title: { ur: titleUr, en: titleEn },
-        amount: totalPurchaseCost,
-        date: movementDate,
-        type: 'expense',
-        fundType: 'general',
-        expenseCategory: expCat,
-        fundSource: fundSrc,
-        notes: String(b.purchaseNotes || '').slice(0, 4000),
-        usageFor: { ur: '', en: '' },
-        status: 'posted',
-        inventoryItemId: item._id,
-        linkedStockMovementId: mov._id,
-      });
-      if (financeTx.accountId) {
-        const acc = await FinanceAccount.findOne({ _id: financeTx.accountId, tenantId: req.tenantId });
-        if (acc) {
-          acc.currentAmount -= totalPurchaseCost;
-          await acc.save();
-        }
-      }
-      mov.financeTransactionId = financeTx._id;
-      await mov.save();
-    }
 
-    const freshItem = await InventoryItem.findById(item._id).lean();
-    res.status(201).json({ movement: mov, item: freshItem, financeTransaction: financeTx });
+    const result = await withMongoTransaction(async (session) => {
+      const itemQuery = InventoryItem.findOne({ _id: itemId, tenantId: req.tenantId });
+      if (session) itemQuery.session(session);
+      const item = await itemQuery;
+      if (!item) {
+        const err = new Error('Item not found');
+        err.status = 404;
+        throw err;
+      }
+      if ((kind === 'exit' || kind === 'registration') && (Number(item.quantity) || 0) < q) {
+        const err = new Error('Insufficient stock');
+        err.status = 400;
+        throw err;
+      }
+
+      if (kind === 'entry') {
+        item.quantity += q;
+        item.received += q;
+        item.purchased += q;
+      } else if (kind === 'exit') {
+        item.quantity -= q;
+        item.used += q;
+      } else if (kind === 'registration') {
+        if (reason === 'damage') item.damaged += q;
+        else if (reason === 'usage') item.used += q;
+        item.quantity -= q;
+      }
+      await item.save(sessionOpts(session));
+
+      const [mov] = await StockMovement.create(
+        [
+          {
+            tenantId: req.tenantId,
+            sessionId: item.sessionId || null,
+            kind,
+            movementFlow: movementFlowVal || undefined,
+            itemId: item._id,
+            quantity: q,
+            date: movementDate,
+            reason: kind === 'registration' ? reason || '' : '',
+            supplier,
+            notes,
+            usageLocation,
+            responsiblePerson,
+            fromLocation: String(b.fromLocation || '').slice(0, 200),
+            toLocation: String(b.toLocation || '').slice(0, 200),
+            department: String(b.department || '').slice(0, 120),
+            referenceNo: String(b.referenceNo || '').slice(0, 120),
+            purchaseUnitCost: Math.max(0, Number(b.purchaseUnitCost) || 0),
+            status: inEnum(b.status, ['posted', 'pending'], 'posted'),
+          },
+        ],
+        sessionOpts(session)
+      );
+
+      let financeTx = null;
+      if (createFinanceExpense && kind === 'entry' && Number.isFinite(totalPurchaseCost) && totalPurchaseCost > 0) {
+        const expCat = inEnum(b.purchaseExpenseCategory, EXPENSE_CATEGORIES, 'ration');
+        const fundSrc = inEnum(b.purchaseFundSource, FUND_SOURCES, 'general');
+        const accountId =
+          b.accountId && mongoose.isValidObjectId(String(b.accountId)) ? String(b.accountId) : null;
+        const titleUr = String(b.expenseTitleUr || item.name?.ur || 'اسٹاک خریداری');
+        const titleEn = String(b.expenseTitleEn || item.name?.en || 'Stock purchase');
+        const [createdTx] = await Transaction.create(
+          [
+            {
+              tenantId: req.tenantId,
+              sessionId: item.sessionId || undefined,
+              accountId: accountId || undefined,
+              title: { ur: titleUr, en: titleEn },
+              amount: totalPurchaseCost,
+              date: movementDate,
+              type: 'expense',
+              fundType: 'general',
+              expenseCategory: expCat,
+              fundSource: fundSrc,
+              notes: String(b.purchaseNotes || '').slice(0, 4000),
+              usageFor: { ur: '', en: '' },
+              status: 'posted',
+              inventoryItemId: item._id,
+              linkedStockMovementId: mov._id,
+            },
+          ],
+          sessionOpts(session)
+        );
+        financeTx = createdTx;
+        if (financeTx.accountId) {
+          await FinanceAccount.findOneAndUpdate(
+            { _id: financeTx.accountId, tenantId: req.tenantId },
+            { $inc: { currentAmount: -totalPurchaseCost } },
+            { new: true, ...sessionOpts(session) }
+          );
+        }
+        mov.financeTransactionId = financeTx._id;
+        await mov.save(sessionOpts(session));
+      }
+
+      const freshQuery = InventoryItem.findById(item._id);
+      if (session) freshQuery.session(session);
+      const freshItem = await freshQuery.lean();
+      return { movement: mov, item: freshItem, financeTransaction: financeTx };
+    });
+
+    res.status(201).json(result);
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
     next(e);
   }
 });

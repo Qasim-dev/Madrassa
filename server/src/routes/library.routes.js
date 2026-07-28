@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { LibraryBook } from '../models/LibraryBook.js';
 import { LibraryTransaction } from '../models/LibraryTransaction.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
+import { withMongoTransaction, sessionOpts } from '../utils/mongoTransaction.js';
 
 const router = Router();
 
@@ -189,67 +190,101 @@ router.post('/transactions/issue', async (req, res, next) => {
       copies = 1,
     } = req.body;
 
-    const book = await LibraryBook.findOne({ _id: bookId, tenantId: req.tenantId });
-    if (!book) return res.status(404).json({ message: 'Book not found' });
-
     const n = Math.max(1, Number(copies) || 1);
-    if ((book.availableCopies ?? 0) < n) {
-      return res.status(400).json({ message: 'Not enough copies available' });
-    }
+    const populated = await withMongoTransaction(async (session) => {
+      const book = await LibraryBook.findOneAndUpdate(
+        { _id: bookId, tenantId: req.tenantId, availableCopies: { $gte: n } },
+        { $inc: { availableCopies: -n } },
+        { new: true, ...sessionOpts(session) }
+      );
+      if (!book) {
+        const exists = await LibraryBook.exists({ _id: bookId, tenantId: req.tenantId });
+        const err = new Error(exists ? 'Not enough copies available' : 'Book not found');
+        err.status = exists ? 400 : 404;
+        throw err;
+      }
 
-    book.availableCopies = (book.availableCopies ?? 0) - n;
-    await book.save();
+      const [tx] = await LibraryTransaction.create(
+        [
+          {
+            tenantId: req.tenantId,
+            bookId: book._id,
+            transactionType: 'issue',
+            borrowerType,
+            studentId: studentId || null,
+            teacherId: teacherId || null,
+            borrowerName: borrowerName || {},
+            issueDate: issueDate ? new Date(issueDate) : new Date(),
+            dueDate: dueDate ? new Date(dueDate) : null,
+            status: 'issued',
+            remarks: remarks || '',
+            copies: n,
+          },
+        ],
+        sessionOpts(session)
+      );
 
-    const tx = await LibraryTransaction.create({
-      tenantId: req.tenantId,
-      bookId: book._id,
-      transactionType: 'issue',
-      borrowerType,
-      studentId: studentId || null,
-      teacherId: teacherId || null,
-      borrowerName: borrowerName || {},
-      issueDate: issueDate ? new Date(issueDate) : new Date(),
-      dueDate: dueDate ? new Date(dueDate) : null,
-      status: 'issued',
-      remarks: remarks || '',
-      copies: n,
+      const popQuery = LibraryTransaction.findById(tx._id)
+        .populate('bookId')
+        .populate('studentId', 'name studentId')
+        .populate('teacherId', 'name');
+      if (session) popQuery.session(session);
+      return popQuery;
     });
 
-    const populated = await LibraryTransaction.findById(tx._id)
-      .populate('bookId')
-      .populate('studentId', 'name studentId')
-      .populate('teacherId', 'name');
     res.status(201).json(populated);
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
     next(e);
   }
 });
 
 router.post('/transactions/:id/return', async (req, res, next) => {
   try {
-    const tx = await LibraryTransaction.findOne({ _id: req.params.id, tenantId: req.tenantId });
-    if (!tx) return res.status(404).json({ message: 'Not found' });
-    if (tx.status === 'returned') return res.status(400).json({ message: 'Already returned' });
+    const populated = await withMongoTransaction(async (session) => {
+      const txQuery = LibraryTransaction.findOne({ _id: req.params.id, tenantId: req.tenantId });
+      if (session) txQuery.session(session);
+      const tx = await txQuery;
+      if (!tx) {
+        const err = new Error('Not found');
+        err.status = 404;
+        throw err;
+      }
+      if (tx.status === 'returned') {
+        const err = new Error('Already returned');
+        err.status = 400;
+        throw err;
+      }
 
-    const book = await LibraryBook.findOne({ _id: tx.bookId, tenantId: req.tenantId });
-    if (!book) return res.status(404).json({ message: 'Book not found' });
+      const n = Math.max(1, Number(tx.copies) || 1);
+      const bookQuery = LibraryBook.findOne({ _id: tx.bookId, tenantId: req.tenantId });
+      if (session) bookQuery.session(session);
+      const book = await bookQuery;
+      if (!book) {
+        const err = new Error('Book not found');
+        err.status = 404;
+        throw err;
+      }
+      book.availableCopies = Math.min((book.availableCopies ?? 0) + n, book.totalCopies ?? n);
+      await book.save(sessionOpts(session));
 
-    const n = Math.max(1, Number(tx.copies) || 1);
-    book.availableCopies = Math.min((book.availableCopies ?? 0) + n, book.totalCopies ?? n);
-    await book.save();
+      tx.status = 'returned';
+      tx.returnDate = req.body.returnDate ? new Date(req.body.returnDate) : new Date();
+      tx.transactionType = 'return';
+      if (req.body.remarks) tx.remarks = String(req.body.remarks);
+      await tx.save(sessionOpts(session));
 
-    tx.status = 'returned';
-    tx.returnDate = req.body.returnDate ? new Date(req.body.returnDate) : new Date();
-    tx.transactionType = 'return';
-    if (req.body.remarks) tx.remarks = String(req.body.remarks);
-    await tx.save();
+      const popQuery = LibraryTransaction.findById(tx._id)
+        .populate('bookId')
+        .populate('studentId', 'name studentId')
+        .populate('teacherId', 'name');
+      if (session) popQuery.session(session);
+      return popQuery;
+    });
 
-    const populated = await LibraryTransaction.findById(tx._id)
-      .populate('bookId')
-      .populate('studentId', 'name studentId')
-      .populate('teacherId', 'name');
     res.json(populated);
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
     next(e);
   }
 });
