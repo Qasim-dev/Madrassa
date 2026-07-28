@@ -9,6 +9,7 @@ import { uploadFinanceReceipt } from '../config/upload.js';
 import { INV_CATEGORIES, INV_UNITS } from '../constants/inventoryEnums.js';
 import { EXPENSE_CATEGORIES, FUND_SOURCES } from '../constants/financeEnums.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const router = Router();
 
@@ -299,6 +300,7 @@ router.get('/items/export', async (req, res, next) => {
 
 router.post(
   '/items',
+  requirePermission('inventory:write'),
   (req, res, next) => {
     const ct = req.headers['content-type'] || '';
     if (ct.includes('multipart/form-data')) {
@@ -347,7 +349,7 @@ router.post(
   }
 );
 
-router.put('/items/:id', async (req, res, next) => {
+router.put('/items/:id', requirePermission('inventory:write'), async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid id' });
@@ -364,7 +366,7 @@ router.put('/items/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/items/:id', async (req, res, next) => {
+router.delete('/items/:id', requirePermission('inventory:write'), async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({ message: 'Invalid id' });
@@ -403,7 +405,7 @@ router.get('/movements', async (req, res, next) => {
   }
 });
 
-router.post('/movements', async (req, res, next) => {
+router.post('/movements', requirePermission('inventory:write'), async (req, res, next) => {
   try {
     const b = req.body || {};
     const kind = inEnum(b.kind, ['entry', 'exit', 'registration'], 'entry');

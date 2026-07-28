@@ -1,11 +1,14 @@
 import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import RequireAuth from './components/RequireAuth'
+import RequirePermission from './components/RequirePermission'
 import MainLayout from './layouts/MainLayout'
 import ErrorBoundary from './components/ErrorBoundary'
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const SignupPage = lazy(() => import('./pages/SignupPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const StudentsPage = lazy(() => import('./pages/StudentsPage'))
 const StudentFormPage = lazy(() => import('./pages/StudentFormPage'))
@@ -22,6 +25,7 @@ const LibraryPage = lazy(() => import('./pages/LibraryPage'))
 const SpeechesPage = lazy(() => import('./pages/SpeechesPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const UsersPage = lazy(() => import('./pages/UsersPage'))
 const IdCardsPage = lazy(() => import('./pages/IdCardsPage'))
 const IdCardsPrintPage = lazy(() => import('./pages/IdCardsPrintPage'))
 const IdCardsTemplatesPage = lazy(() => import('./pages/IdCardsTemplatesPage'))
@@ -47,6 +51,14 @@ function RouteFallback() {
   )
 }
 
+function Guard({ permission, children }) {
+  return (
+    <RequirePermission permission={permission} fallback="redirect">
+      {children}
+    </RequirePermission>
+  )
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -54,6 +66,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/id-cards/verify/:token" element={<IdCardVerifyPage />} />
           <Route
             path="/"
@@ -74,27 +88,112 @@ export default function App() {
             <Route path="id-cards/templates" element={<IdCardsTemplatesPage />} />
             <Route path="id-cards/history" element={<IdCardsHistoryPage />} />
             <Route path="teachers" element={<TeachersPage />} />
-            <Route path="teachers/new" element={<TeacherFormPage />} />
-            <Route path="teachers/:id/edit" element={<TeacherFormPage />} />
-            <Route path="grades" element={<GradesPage />} />
+            <Route
+              path="teachers/new"
+              element={
+                <Guard permission="teachers:write">
+                  <TeacherFormPage />
+                </Guard>
+              }
+            />
+            <Route
+              path="teachers/:id/edit"
+              element={
+                <Guard permission="teachers:write">
+                  <TeacherFormPage />
+                </Guard>
+              }
+            />
+            <Route
+              path="grades"
+              element={
+                <Guard permission="grades:write">
+                  <GradesPage />
+                </Guard>
+              }
+            />
             <Route path="attendance" element={<AttendancePage />} />
             <Route path="student-character" element={<StudentCharacterPage />} />
             <Route path="exams" element={<ExamsPage />} />
             <Route path="exams/print" element={<ExamResultPrintPage />} />
-            <Route path="fees" element={<FeesPage />} />
-            <Route path="finance" element={<FinancePage />} />
+            <Route
+              path="fees"
+              element={
+                <Guard permission="fees:read">
+                  <FeesPage />
+                </Guard>
+              }
+            />
+            <Route
+              path="finance"
+              element={
+                <Guard permission="finance:read">
+                  <FinancePage />
+                </Guard>
+              }
+            />
             <Route path="inventory" element={<InventoryPage />} />
             <Route path="library" element={<LibraryPage />} />
             <Route path="speeches" element={<SpeechesPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route
+              path="settings"
+              element={
+                <Guard permission="settings:write">
+                  <SettingsPage />
+                </Guard>
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <Guard permission="users:manage">
+                  <UsersPage />
+                </Guard>
+              }
+            />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="tartibat/sessions" element={<TartibatSessionsPage />} />
-            <Route path="tartibat/subjects" element={<TartibatSubjectsPage />} />
-            <Route path="tartibat/darajat" element={<TartibatDarajatPage />} />
-            <Route path="tartibat/books" element={<TartibatBooksPage />} />
+            <Route
+              path="tartibat/sessions"
+              element={
+                <Guard permission="tartibat:write">
+                  <TartibatSessionsPage />
+                </Guard>
+              }
+            />
+            <Route
+              path="tartibat/subjects"
+              element={
+                <Guard permission="tartibat:write">
+                  <TartibatSubjectsPage />
+                </Guard>
+              }
+            />
+            <Route
+              path="tartibat/darajat"
+              element={
+                <Guard permission="tartibat:write">
+                  <TartibatDarajatPage />
+                </Guard>
+              }
+            />
+            <Route
+              path="tartibat/books"
+              element={
+                <Guard permission="tartibat:write">
+                  <TartibatBooksPage />
+                </Guard>
+              }
+            />
             <Route path="book-reading" element={<BookReadingPage />} />
             <Route path="book-reading/:bookId" element={<BookReadingDetailPage />} />
-            <Route path="tartibat/timetable" element={<TartibatTimetablePage />} />
+            <Route
+              path="tartibat/timetable"
+              element={
+                <Guard permission="tartibat:write">
+                  <TartibatTimetablePage />
+                </Guard>
+              }
+            />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

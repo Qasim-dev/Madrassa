@@ -3,6 +3,7 @@ import { SubjectBook } from '../models/SubjectBook.js';
 import { Subject } from '../models/Subject.js';
 import { Darjah } from '../models/Darjah.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const router = Router();
 
@@ -88,7 +89,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const { subjectId, darjahId } = req.body;
     if (!subjectId || !darjahId) {
@@ -111,7 +112,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const existing = await SubjectBook.findOne({ _id: req.params.id, tenantId: req.tenantId });
     if (!existing) return res.status(404).json({ message: 'Not found' });
@@ -136,7 +137,7 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('tartibat:delete'), async (req, res, next) => {
   try {
     const doc = await SubjectBook.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     if (!doc) return res.status(404).json({ message: 'Not found' });

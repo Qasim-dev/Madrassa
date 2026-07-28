@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { uploadsDir } from './config/upload.js';
 import { requireAuth } from './middleware/auth.js';
+import { requirePermission } from './middleware/rbac.js';
+import { requireUploadAccess } from './middleware/uploadAccess.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 import authRoutes from './routes/auth.routes.js';
@@ -31,6 +33,7 @@ import speechesRoutes from './routes/speeches.routes.js';
 import idCardsRoutes from './routes/idCards.routes.js';
 import publicIdCardsRoutes from './routes/publicIdCards.routes.js';
 import studentActivitiesRoutes from './routes/studentActivities.routes.js';
+import usersRoutes from './routes/users.routes.js';
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -53,7 +56,7 @@ export function createApp() {
   app.use(cors({ origin, credentials: true }));
   app.use(express.json({ limit: '2mb' }));
 
-  app.use('/uploads', express.static(uploadsDir));
+  app.use('/uploads', requireUploadAccess, express.static(uploadsDir));
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
@@ -63,13 +66,19 @@ export function createApp() {
   app.use('/api/dashboard', requireAuth, dashboardRoutes);
   app.use('/api/students', requireAuth, studentsRoutes);
   app.use('/api/teachers', requireAuth, teachersRoutes);
-  app.use('/api/teacher-salaries', requireAuth, teacherSalariesRoutes);
+  app.use(
+    '/api/teacher-salaries',
+    requireAuth,
+    requirePermission('finance:write'),
+    teacherSalariesRoutes
+  );
   app.use('/api/grades', requireAuth, gradesRoutes);
   app.use('/api/attendance', requireAuth, attendanceRoutes);
-  app.use('/api/fees', requireAuth, feesRoutes);
-  app.use('/api/finance', requireAuth, financeRoutes);
+  app.use('/api/fees', requireAuth, requirePermission('fees:write'), feesRoutes);
+  app.use('/api/finance', requireAuth, requirePermission('finance:write'), financeRoutes);
   app.use('/api/inventory', requireAuth, inventoryRoutes);
   app.use('/api/settings', requireAuth, settingsRoutes);
+  app.use('/api/users', requireAuth, usersRoutes);
   app.use('/api/tartibat/sessions', requireAuth, tartibatSessionsRoutes);
   app.use('/api/tartibat/subjects', requireAuth, tartibatSubjectsRoutes);
   app.use('/api/tartibat/darajat', requireAuth, tartibatDarajatRoutes);

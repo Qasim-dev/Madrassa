@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { TimeSlot } from '../models/TimeSlot.js';
 import { TimetableEntry } from '../models/TimetableEntry.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.get('/slots', async (req, res, next) => {
   }
 });
 
-router.post('/slots', async (req, res, next) => {
+router.post('/slots', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const doc = await TimeSlot.create({ ...req.body, tenantId: req.tenantId });
     res.status(201).json(doc);
@@ -25,7 +26,7 @@ router.post('/slots', async (req, res, next) => {
   }
 });
 
-router.put('/slots/:id', async (req, res, next) => {
+router.put('/slots/:id', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const doc = await TimeSlot.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
@@ -39,7 +40,7 @@ router.put('/slots/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/slots/:id', async (req, res, next) => {
+router.delete('/slots/:id', requirePermission('tartibat:delete'), async (req, res, next) => {
   try {
     const doc = await TimeSlot.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     if (!doc) return res.status(404).json({ message: 'Not found' });
@@ -92,7 +93,7 @@ async function assertNoDarjahConflict({ tenantId, sessionId, darjahId, day, slot
   }
 }
 
-router.post('/entries', async (req, res, next) => {
+router.post('/entries', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const body = { ...req.body, tenantId: req.tenantId };
     await assertNoTeacherConflict({
@@ -123,7 +124,7 @@ router.post('/entries', async (req, res, next) => {
   }
 });
 
-router.put('/entries/:id', async (req, res, next) => {
+router.put('/entries/:id', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const existing = await TimetableEntry.findOne({ _id: req.params.id, tenantId: req.tenantId });
     if (!existing) return res.status(404).json({ message: 'Not found' });
@@ -169,7 +170,7 @@ router.put('/entries/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/entries/:id', async (req, res, next) => {
+router.delete('/entries/:id', requirePermission('tartibat:delete'), async (req, res, next) => {
   try {
     const doc = await TimetableEntry.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     if (!doc) return res.status(404).json({ message: 'Not found' });

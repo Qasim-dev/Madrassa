@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { logout } from '../features/auth/authSlice'
+import { logout, setCredentials } from '../features/auth/authSlice'
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: '/api',
@@ -19,28 +19,61 @@ function httpStatus(error) {
   return null
 }
 
-let loggingOut = false
+let refreshPromise = null
 
-/** Log out when an authenticated request returns 401 (expired / invalid token). */
-const baseQuery = async (args, apiRTK, extraOptions) => {
-  const result = await rawBaseQuery(args, apiRTK, extraOptions)
-  if (httpStatus(result.error) === 401) {
-    const token = apiRTK.getState().auth.token
-    const url = typeof args === 'string' ? args : args?.url || ''
-    const isPublicAuth = /auth\/(login|register)|public\//.test(url)
-    if (token && !isPublicAuth && !loggingOut) {
-      loggingOut = true
-      apiRTK.dispatch(logout())
-      // Defer reset so we don't clear in-flight request bookkeeping mid-handler.
-      queueMicrotask(() => {
-        try {
-          apiRTK.dispatch(api.util.resetApiState())
-        } finally {
-          loggingOut = false
-        }
-      })
-    }
+async function tryRefresh(apiRTK) {
+  const state = apiRTK.getState().auth
+  const refreshToken = state.refreshToken
+  if (!refreshToken) return false
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const result = await rawBaseQuery(
+        { url: 'auth/refresh', method: 'POST', body: { refreshToken } },
+        apiRTK,
+        {}
+      )
+      if (result.data?.token || result.data?.accessToken) {
+        apiRTK.dispatch(
+          setCredentials({
+            token: result.data.token || result.data.accessToken,
+            refreshToken: result.data.refreshToken || refreshToken,
+            user: result.data.user || state.user,
+            remember: state.remember,
+          })
+        )
+        return true
+      }
+      return false
+    })().finally(() => {
+      refreshPromise = null
+    })
   }
+  return refreshPromise
+}
+
+/** Refresh access token on 401; otherwise log out. */
+const baseQuery = async (args, apiRTK, extraOptions) => {
+  let result = await rawBaseQuery(args, apiRTK, extraOptions)
+  if (httpStatus(result.error) !== 401) return result
+
+  const url = typeof args === 'string' ? args : args?.url || ''
+  const isPublicAuth = /auth\/(login|register|refresh|forgot-password|reset-password)|public\//.test(url)
+  if (isPublicAuth) return result
+
+  const refreshed = await tryRefresh(apiRTK)
+  if (refreshed) {
+    result = await rawBaseQuery(args, apiRTK, extraOptions)
+    return result
+  }
+
+  apiRTK.dispatch(logout())
+  queueMicrotask(() => {
+    try {
+      apiRTK.dispatch(api.util.resetApiState())
+    } catch {
+      /* ignore */
+    }
+  })
   return result
 }
 
@@ -64,6 +97,8 @@ export const api = createApi({
     'Library',
     'Speech',
     'IdCard',
+    'StudentActivity',
+    'User',
   ],
   endpoints: (builder) => ({
     login: builder.mutation({
@@ -71,6 +106,18 @@ export const api = createApi({
     }),
     register: builder.mutation({
       query: (body) => ({ url: 'auth/register', method: 'POST', body }),
+    }),
+    refreshToken: builder.mutation({
+      query: (body) => ({ url: 'auth/refresh', method: 'POST', body }),
+    }),
+    logoutSession: builder.mutation({
+      query: () => ({ url: 'auth/logout', method: 'POST' }),
+    }),
+    forgotPassword: builder.mutation({
+      query: (body) => ({ url: 'auth/forgot-password', method: 'POST', body }),
+    }),
+    resetPassword: builder.mutation({
+      query: (body) => ({ url: 'auth/reset-password', method: 'POST', body }),
     }),
     getMe: builder.query({
       query: () => 'auth/me',
@@ -83,6 +130,22 @@ export const api = createApi({
     }),
     changePassword: builder.mutation({
       query: (body) => ({ url: 'auth/change-password', method: 'POST', body }),
+    }),
+    getUsers: builder.query({
+      query: () => 'users',
+      providesTags: ['User'],
+    }),
+    createUser: builder.mutation({
+      query: (body) => ({ url: 'users', method: 'POST', body }),
+      invalidatesTags: ['User'],
+    }),
+    patchUser: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `users/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['User'],
+    }),
+    deleteUser: builder.mutation({
+      query: (id) => ({ url: `users/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['User'],
     }),
     getDashboardStats: builder.query({
       query: (params) => ({
@@ -523,6 +586,54 @@ export const api = createApi({
     verifyIdCard: builder.query({
       query: (token) => `public/id-cards/verify/${token}`,
     }),
+    getActivityCategories: builder.query({
+      query: (params) => ({ url: 'student-activities/categories', params }),
+      providesTags: ['StudentActivity'],
+    }),
+    createActivityCategory: builder.mutation({
+      query: (body) => ({ url: 'student-activities/categories', method: 'POST', body }),
+      invalidatesTags: ['StudentActivity'],
+    }),
+    patchActivityCategory: builder.mutation({
+      query: ({ id, ...body }) => ({
+        url: `student-activities/categories/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['StudentActivity'],
+    }),
+    reorderActivityCategories: builder.mutation({
+      query: (body) => ({ url: 'student-activities/categories/reorder', method: 'POST', body }),
+      invalidatesTags: ['StudentActivity'],
+    }),
+    deleteActivityCategory: builder.mutation({
+      query: ({ id, hard }) => ({
+        url: `student-activities/categories/${id}`,
+        method: 'DELETE',
+        params: hard ? { hard: 1 } : undefined,
+      }),
+      invalidatesTags: ['StudentActivity'],
+    }),
+    getDailyActivities: builder.query({
+      query: (params) => ({ url: 'student-activities/daily', params }),
+      providesTags: ['StudentActivity'],
+    }),
+    bulkSaveDailyActivities: builder.mutation({
+      query: (body) => ({ url: 'student-activities/daily/bulk', method: 'POST', body }),
+      invalidatesTags: ['StudentActivity'],
+    }),
+    copyDailyActivities: builder.mutation({
+      query: (body) => ({ url: 'student-activities/daily/copy', method: 'POST', body }),
+      invalidatesTags: ['StudentActivity'],
+    }),
+    getStudentActivityHistory: builder.query({
+      query: (params) => ({ url: 'student-activities/history', params }),
+      providesTags: ['StudentActivity'],
+    }),
+    getActivityAnalyticsSummary: builder.query({
+      query: (params) => ({ url: 'student-activities/analytics/summary', params }),
+      providesTags: ['StudentActivity'],
+    }),
     getSettings: builder.query({
       query: () => 'settings',
       providesTags: ['Settings'],
@@ -915,10 +1026,18 @@ export const api = createApi({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useRefreshTokenMutation,
+  useLogoutSessionMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
   useGetMeQuery,
   usePatchMeMutation,
   usePatchTenantMutation,
   useChangePasswordMutation,
+  useGetUsersQuery,
+  useCreateUserMutation,
+  usePatchUserMutation,
+  useDeleteUserMutation,
   useGetDashboardStatsQuery,
   useLazyGetSearchSuggestionsQuery,
   useGetStudentsQuery,
@@ -1086,4 +1205,14 @@ export const {
   useGetIdCardPrintHistoryQuery,
   useLogIdCardPrintMutation,
   useVerifyIdCardQuery,
+  useGetActivityCategoriesQuery,
+  useCreateActivityCategoryMutation,
+  usePatchActivityCategoryMutation,
+  useReorderActivityCategoriesMutation,
+  useDeleteActivityCategoryMutation,
+  useGetDailyActivitiesQuery,
+  useBulkSaveDailyActivitiesMutation,
+  useCopyDailyActivitiesMutation,
+  useGetStudentActivityHistoryQuery,
+  useGetActivityAnalyticsSummaryQuery,
 } = api

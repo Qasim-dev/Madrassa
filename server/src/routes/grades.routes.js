@@ -2,6 +2,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import { Grade } from '../models/Grade.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const router = Router();
 
@@ -32,7 +33,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('grades:write'), async (req, res, next) => {
   try {
     const doc = await Grade.create({ ...req.body, tenantId: req.tenantId });
     res.status(201).json(doc);
@@ -41,7 +42,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('grades:write'), async (req, res, next) => {
   try {
     const doc = await Grade.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
@@ -55,7 +56,7 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('grades:write'), async (req, res, next) => {
   try {
     const doc = await Grade.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     if (!doc) return res.status(404).json({ message: 'Not found' });

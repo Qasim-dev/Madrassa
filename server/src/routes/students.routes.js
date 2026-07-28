@@ -16,6 +16,7 @@ import {
 } from '../utils/excelImportResolve.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const router = Router();
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -368,7 +369,7 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('students:delete'), async (req, res, next) => {
   try {
     const doc = await Student.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     if (!doc) return res.status(404).json({ message: 'Not found' });

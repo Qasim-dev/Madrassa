@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Subject } from '../models/Subject.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const doc = await Subject.create({ ...req.body, tenantId: req.tenantId });
     res.status(201).json(doc);
@@ -25,7 +26,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const doc = await Subject.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
@@ -39,7 +40,7 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('tartibat:delete'), async (req, res, next) => {
   try {
     const doc = await Subject.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     if (!doc) return res.status(404).json({ message: 'Not found' });

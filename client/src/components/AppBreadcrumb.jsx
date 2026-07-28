@@ -33,6 +33,7 @@ const ROUTES = [
   { path: '/library', labelKey: 'nav.library' },
   { path: '/speeches', labelKey: 'nav.speeches' },
   { path: '/profile', labelKey: 'nav.profile' },
+  { path: '/users', labelKey: 'nav.users' },
   { path: '/settings', labelKey: 'nav.settings' },
 ]
 

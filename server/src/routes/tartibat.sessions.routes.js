@@ -13,6 +13,7 @@ import { FeeItem } from '../models/FeeItem.js';
 import { ExamContainer } from '../models/ExamContainer.js';
 import { ExamClassPipeline } from '../models/ExamClassPipeline.js';
 import { ExamSchedule } from '../models/ExamSchedule.js';
+import { requirePermission } from '../middleware/rbac.js';
 import { ExamSubjectMapping } from '../models/ExamSubjectMapping.js';
 import { ExamMarks } from '../models/ExamMarks.js';
 import { ExamResult } from '../models/ExamResult.js';
@@ -85,7 +86,7 @@ router.get('/:id/summary', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const payload = {
       title: String(req.body.title || '').trim(),
@@ -102,7 +103,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const doc = await Session.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
@@ -132,7 +133,7 @@ router.put('/:id', async (req, res, next) => {
  * DELETE /:id
  * Cascade-deletes the session and ALL linked data across the system.
  */
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('tartibat:delete'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const { tenantId } = req;

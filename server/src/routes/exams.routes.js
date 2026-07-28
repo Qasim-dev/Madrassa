@@ -38,6 +38,7 @@ import {
   healExamPublishedStatus,
 } from '../services/examFlows.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -111,7 +112,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('exams:admin'), async (req, res, next) => {
   try {
     const { sessionId } = req.examScope;
     const { name, examType, examTypeIndex, startDate, endDate, resultPublicationDate, status } =
@@ -164,7 +165,7 @@ router.put('/:examId', requireExamContext, async (req, res, next) => {
   }
 });
 
-router.delete('/:examId', requireExamContext, async (req, res, next) => {
+router.delete('/:examId', requireExamContext, requirePermission('exams:admin'), async (req, res, next) => {
   try {
     const reason = String(req.body?.reason || req.query?.reason || '').trim();
     const result = await deleteExamCascade({
@@ -181,7 +182,7 @@ router.delete('/:examId', requireExamContext, async (req, res, next) => {
 });
 
 /** Prefer POST when clients cannot send a body with DELETE */
-router.post('/:examId/delete', requireExamContext, async (req, res, next) => {
+router.post('/:examId/delete', requireExamContext, requirePermission('exams:admin'), async (req, res, next) => {
   try {
     const reason = String(req.body?.reason || req.query?.reason || '').trim();
     const result = await deleteExamCascade({
@@ -197,7 +198,7 @@ router.post('/:examId/delete', requireExamContext, async (req, res, next) => {
   }
 });
 
-router.post('/:examId/unlock', requireExamContext, async (req, res, next) => {
+router.post('/:examId/unlock', requireExamContext, requirePermission('exams:admin'), async (req, res, next) => {
   try {
     const result = await unlockExamContainer({
       tenantId: req.tenantId,
@@ -798,7 +799,7 @@ router.post('/:examId/marks/grace', requireExamContext, async (req, res, next) =
   }
 });
 
-router.post('/:examId/marks/unlock', requireExamContext, async (req, res, next) => {
+router.post('/:examId/marks/unlock', requireExamContext, requirePermission('exams:admin'), async (req, res, next) => {
   try {
     const result = await unlockForReEvaluation({
       tenantId: req.tenantId,
@@ -817,7 +818,7 @@ router.post('/:examId/marks/unlock', requireExamContext, async (req, res, next) 
 
 // ─── RESULTS ─────────────────────────────────────────────────────
 
-router.post('/:examId/process-results', requireExamContext, async (req, res, next) => {
+router.post('/:examId/process-results', requireExamContext, requirePermission('exams:admin'), async (req, res, next) => {
   try {
     const { darjahId } = req.body;
     if (!darjahId) {
@@ -871,7 +872,7 @@ router.get('/:examId/results', requireExamContext, async (req, res, next) => {
   }
 });
 
-router.post('/:examId/publish', requireExamContext, async (req, res, next) => {
+router.post('/:examId/publish', requireExamContext, requirePermission('exams:admin'), async (req, res, next) => {
   try {
     const { level, targetId } = req.body;
     const result = await publishResults({

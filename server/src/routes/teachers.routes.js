@@ -13,6 +13,7 @@ import {
 } from '../utils/excelImportResolve.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const router = Router();
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -78,7 +79,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/import', uploadExcel.single('file'), async (req, res, next) => {
+router.post('/import', requirePermission('teachers:write'), uploadExcel.single('file'), async (req, res, next) => {
   try {
     if (!req.file?.buffer) return res.status(400).json({ message: 'No file uploaded' });
 
@@ -209,7 +210,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('teachers:write'), async (req, res, next) => {
   try {
     const doc = await Teacher.create({ ...req.body, tenantId: req.tenantId });
     const populated = await Teacher.findOne({ _id: doc._id, tenantId: req.tenantId })
@@ -223,7 +224,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('teachers:write'), async (req, res, next) => {
   try {
     const doc = await Teacher.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
@@ -241,7 +242,7 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('teachers:write'), async (req, res, next) => {
   try {
     const doc = await Teacher.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     if (!doc) return res.status(404).json({ message: 'Not found' });

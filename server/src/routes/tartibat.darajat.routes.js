@@ -3,6 +3,7 @@ import { Darjah } from '../models/Darjah.js';
 import { Subject } from '../models/Subject.js';
 import { SubjectBook } from '../models/SubjectBook.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const router = Router();
 
@@ -84,7 +85,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     await assertSubjectsMatchSession(req.tenantId, req.body.sessionId, req.body.subjectIds);
     await assertAssignmentsValid(req.tenantId, null, req.body.subjectIds, req.body.assignments);
@@ -101,7 +102,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const prev = await Darjah.findOne({ _id: req.params.id, tenantId: req.tenantId });
     if (!prev) return res.status(404).json({ message: 'Not found' });
@@ -128,7 +129,7 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
-router.patch('/:id/subjects', async (req, res, next) => {
+router.patch('/:id/subjects', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
     const ids = Array.isArray(req.body.subjectIds) ? req.body.subjectIds : [];
     const unique = [...new Set(ids.map((x) => String(x)))].map((x) => x);
@@ -150,7 +151,7 @@ router.patch('/:id/subjects', async (req, res, next) => {
   }
 });
 
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', requirePermission('tartibat:delete'), async (req, res, next) => {
   try {
     const doc = await Darjah.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     if (!doc) return res.status(404).json({ message: 'Not found' });

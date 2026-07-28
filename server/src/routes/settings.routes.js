@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { TenantSettings } from '../models/TenantSettings.js';
 import { Book } from '../models/Book.js';
 import { uploadLogo } from '../config/upload.js';
+import { requirePermission } from '../middleware/rbac.js';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.patch('/', async (req, res, next) => {
+router.patch('/', requirePermission('settings:write'), async (req, res, next) => {
   try {
     const $set = {};
     for (const key of PATCHABLE_SETTINGS) {
@@ -60,7 +61,7 @@ router.patch('/', async (req, res, next) => {
   }
 });
 
-router.post('/logo', uploadLogo.single('logo'), async (req, res, next) => {
+router.post('/logo', requirePermission('settings:write'), uploadLogo.single('logo'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file' });
     const logoUrl = `/uploads/${req.file.filename}`;
@@ -84,7 +85,7 @@ router.get('/books', async (req, res, next) => {
   }
 });
 
-router.post('/books', async (req, res, next) => {
+router.post('/books', requirePermission('settings:write'), async (req, res, next) => {
   try {
     const doc = await Book.create({ ...req.body, tenantId: req.tenantId });
     res.status(201).json(doc);
@@ -93,7 +94,7 @@ router.post('/books', async (req, res, next) => {
   }
 });
 
-router.put('/books/:id', async (req, res, next) => {
+router.put('/books/:id', requirePermission('settings:write'), async (req, res, next) => {
   try {
     const doc = await Book.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
@@ -112,7 +113,7 @@ router.put('/books/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/books/:id', async (req, res, next) => {
+router.delete('/books/:id', requirePermission('settings:write'), async (req, res, next) => {
   try {
     await Book.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
     res.json({ ok: true });

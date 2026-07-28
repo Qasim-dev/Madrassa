@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import { logout, setUser } from '../features/auth/authSlice'
 import { setActiveSessionId } from '../features/session/sessionSlice'
-import { api, useGetMeQuery, useGetSessionsQuery, useGetSettingsQuery } from '../services/api'
+import { api, useGetMeQuery, useGetSessionsQuery, useGetSettingsQuery, useLogoutSessionMutation } from '../services/api'
 import { useEffect, useState, useMemo } from 'react'
 import { SidebarMenu } from '../components/SidebarMenu'
 import AppHeaderSearch from '../components/AppHeaderSearch'
@@ -12,6 +12,7 @@ import { loc, uiLang } from '../shared/localized'
 import { absoluteAssetUrl } from '../shared/assetUrl'
 import { getInstitutionName, getInstitutionInitial } from '../shared/institutionBrand'
 import { CalendarModeProvider, useCalendarMode } from '../app/calendarMode.jsx'
+import { can } from '../shared/permissions'
 
 /** Sidebar sections: each group is an expandable header (labelKey) with nested links. */
 const menuGroups = [
@@ -24,27 +25,28 @@ const menuGroups = [
     labelKey: 'navTartibat',
     icon: 'tartibat',
     items: [
-      { to: '/tartibat/sessions', navKey: 'navTartibatSessions', icon: 'tartibat' },
-      { to: '/tartibat/subjects', navKey: 'navTartibatSubjects', icon: 'tartibat' },
-      { to: '/tartibat/darajat', navKey: 'navTartibatDarajat', icon: 'tartibat' },
-      { to: '/grades', navKey: 'navGrades', icon: 'grades' },
-      { to: '/tartibat/books', navKey: 'navTartibatBooks', icon: 'tartibat' },
-      { to: '/book-reading', navKey: 'navBookReading', icon: 'tartibat' },
-      { to: '/speeches', navKey: 'navSpeeches', icon: 'speeches' },
-      { to: '/tartibat/timetable', navKey: 'navTartibatTimetable', icon: 'tartibat' },
+      { to: '/tartibat/sessions', navKey: 'navTartibatSessions', icon: 'tartibat', permission: 'tartibat:write' },
+      { to: '/tartibat/subjects', navKey: 'navTartibatSubjects', icon: 'tartibat', permission: 'tartibat:write' },
+      { to: '/tartibat/darajat', navKey: 'navTartibatDarajat', icon: 'tartibat', permission: 'tartibat:write' },
+      { to: '/grades', navKey: 'navGrades', icon: 'grades', permission: 'grades:write' },
+      { to: '/tartibat/books', navKey: 'navTartibatBooks', icon: 'tartibat', permission: 'tartibat:write' },
+      { to: '/book-reading', navKey: 'navBookReading', icon: 'tartibat', permission: 'bookreading:write' },
+      { to: '/speeches', navKey: 'navSpeeches', icon: 'speeches', permission: 'speeches:write' },
+      { to: '/tartibat/timetable', navKey: 'navTartibatTimetable', icon: 'tartibat', permission: 'tartibat:write' },
     ],
   },
   {
     labelKey: 'groupPeople',
     icon: 'students',
     items: [
-      { to: '/students', navKey: 'navStudents', icon: 'students' },
-      { to: '/teachers', navKey: 'navTeachers', icon: 'teachers' },
+      { to: '/students', navKey: 'navStudents', icon: 'students', permission: 'students:read' },
+      { to: '/teachers', navKey: 'navTeachers', icon: 'teachers', permission: 'teachers:read' },
     ],
   },
   {
     labelKey: 'navIdCards',
     icon: 'idcard',
+    permission: 'idcards:write',
     items: [
       { to: '/id-cards', navKey: 'navIdCardsHub', icon: 'idcard', end: true },
       { to: '/id-cards/print', navKey: 'navIdCardsPrint', icon: 'idcard' },
@@ -56,34 +58,37 @@ const menuGroups = [
     labelKey: 'groupOperations',
     icon: 'attendance',
     items: [
-      { to: '/attendance', navKey: 'navAttendance', icon: 'attendance' },
-      { to: '/student-character', navKey: 'navStudentCharacter', icon: 'character' },
+      { to: '/attendance', navKey: 'navAttendance', icon: 'attendance', permission: 'attendance:write' },
+      { to: '/student-character', navKey: 'navStudentCharacter', icon: 'character', permission: 'character:write' },
     ],
   },
   {
     labelKey: 'groupFinance',
     icon: 'finance',
     items: [
-      { to: '/finance', navKey: 'navFinance', icon: 'finance' },
-      { to: '/fees', navKey: 'navFees', icon: 'fees' },
-      { to: '/inventory', navKey: 'navInventory', icon: 'inventory' },
+      { to: '/finance', navKey: 'navFinance', icon: 'finance', permission: 'finance:read' },
+      { to: '/fees', navKey: 'navFees', icon: 'fees', permission: 'fees:read' },
+      { to: '/inventory', navKey: 'navInventory', icon: 'inventory', permission: 'inventory:read' },
     ],
   },
   {
     labelKey: 'navExams',
     icon: 'exams',
+    permission: 'exams:read',
     items: [{ to: '/exams', navKey: 'navExams', icon: 'exams' }],
   },
   {
     labelKey: 'navLibrary',
     icon: 'library',
+    permission: 'library:write',
     items: [{ to: '/library', navKey: 'navLibrary', icon: 'library' }],
   },
   {
     labelKey: 'groupSystem',
     icon: 'settings',
     items: [
-      { to: '/settings', navKey: 'navSettings', icon: 'settings' },
+      { to: '/users', navKey: 'navUsers', icon: 'profile', permission: 'users:manage' },
+      { to: '/settings', navKey: 'navSettings', icon: 'settings', permission: 'settings:write' },
       { to: '/profile', navKey: 'navProfile', icon: 'profile' },
     ],
   },
@@ -110,7 +115,22 @@ function MainLayoutInner() {
   const { data: me } = useGetMeQuery(undefined, { skip: !token })
   const { data: settings } = useGetSettingsQuery(undefined, { skip: !token })
   const { data: sessionsForHeader = [] } = useGetSessionsQuery(undefined, { skip: !token })
+  const [logoutSession] = useLogoutSessionMutation()
   const logoAbs = absoluteAssetUrl(settings?.logoUrl)
+
+  const visibleMenuGroups = useMemo(() => {
+    const actor = user || me
+    return menuGroups
+      .map((group) => {
+        if (group.permission && !can(actor, group.permission)) return null
+        const items = (group.items || []).filter(
+          (item) => !item.permission || can(actor, item.permission)
+        )
+        if (!items.length && group.items?.length) return null
+        return { ...group, items: items.length ? items : group.items }
+      })
+      .filter(Boolean)
+  }, [user, me])
 
   const OTHER_LANG_KEY = 'madrassaShowOtherLangFields'
   const UR_FIELD_PREF_KEY = 'madrassaUrFieldPref'
@@ -296,7 +316,7 @@ function MainLayoutInner() {
           </div>
         </div>
 
-        <SidebarMenu groups={menuGroups} />
+        <SidebarMenu groups={visibleMenuGroups} />
       </aside>
 
       <div className="app-main-column flex min-h-0 min-w-0 flex-1 flex-col">
@@ -388,7 +408,12 @@ function MainLayoutInner() {
                 <button
                   type="button"
                   className="btn btn-sm btn-outline-danger app-header-logout-btn"
-                  onClick={() => {
+                  onClick={async () => {
+                    try {
+                      await logoutSession().unwrap()
+                    } catch {
+                      /* still clear local session */
+                    }
                     dispatch(logout())
                     dispatch(api.util.resetApiState())
                     navigate('/login')

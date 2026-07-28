@@ -4,6 +4,8 @@ import * as authService from '../services/auth.service.js';
 import { User } from '../models/User.js';
 import { Tenant } from '../models/Tenant.js';
 import { requireAuth } from '../middleware/auth.js';
+import { requirePermission } from '../middleware/rbac.js';
+import { permissionsForRole } from '../constants/permissions.js';
 
 const router = Router();
 
@@ -50,6 +52,67 @@ router.post(
   }
 );
 
+router.post(
+  '/refresh',
+  body('refreshToken').notEmpty(),
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+      }
+      const result = await authService.refreshSession(req.body.refreshToken);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post('/logout', requireAuth, async (req, res, next) => {
+  try {
+    await authService.logout(req.user.userId, req.tenantId);
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post(
+  '/forgot-password',
+  body('email').isEmail().normalizeEmail(),
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+      }
+      const result = await authService.requestPasswordReset(req.body.email);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+router.post(
+  '/reset-password',
+  body('token').notEmpty(),
+  body('newPassword').isLength({ min: 8 }),
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+      }
+      await authService.resetPasswordWithToken(req.body.token, req.body.newPassword);
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const user = await User.findById(req.user.userId).populate('tenantId');
@@ -63,6 +126,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
       name: user.name,
       preferredLocale: user.preferredLocale,
       role: user.role,
+      permissions: permissionsForRole(user.role),
       tenant: tenant
         ? { id: tenant._id, slug: tenant.slug, name: tenant.name }
         : null,
@@ -109,6 +173,8 @@ router.patch(
         phone: user.phone,
         name: user.name,
         preferredLocale: user.preferredLocale,
+        role: user.role,
+        permissions: permissionsForRole(user.role),
         tenant: tenant
           ? { id: tenant._id, slug: tenant.slug, name: tenant.name }
           : null,
@@ -122,6 +188,7 @@ router.patch(
 router.patch(
   '/tenant',
   requireAuth,
+  requirePermission('settings:write'),
   body('name').isObject(),
   async (req, res, next) => {
     try {
