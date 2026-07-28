@@ -8,6 +8,7 @@ import { FinanceAccount } from '../models/FinanceAccount.js';
 import { uploadFinanceReceipt } from '../config/upload.js';
 import { INV_CATEGORIES, INV_UNITS } from '../constants/inventoryEnums.js';
 import { EXPENSE_CATEGORIES, FUND_SOURCES } from '../constants/financeEnums.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const router = Router();
 
@@ -353,7 +354,7 @@ router.put('/items/:id', async (req, res, next) => {
     }
     const doc = await InventoryItem.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
-      { $set: req.body },
+      { $set: sanitizeUpdateBody(req.body) },
       { new: true, runValidators: true }
     );
     if (!doc) return res.status(404).json({ message: 'Not found' });

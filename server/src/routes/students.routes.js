@@ -15,6 +15,7 @@ import {
   resolveGradeId,
 } from '../utils/excelImportResolve.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const router = Router();
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -325,9 +326,7 @@ router.put('/:id', async (req, res, next) => {
     const existing = await Student.findOne({ _id: req.params.id, tenantId: req.tenantId });
     if (!existing) return res.status(404).json({ message: 'Not found' });
 
-    const body = { ...req.body };
-    delete body.rollNumber;
-    delete body.photoUrl;
+    const body = sanitizeUpdateBody(req.body, ['rollNumber', 'photoUrl']);
     normalizeIdFields(body, [
       'sessionId',
       'gradeId',

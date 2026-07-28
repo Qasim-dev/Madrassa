@@ -37,6 +37,7 @@ import {
   reprocessResultsIfNeeded,
   healExamPublishedStatus,
 } from '../services/examFlows.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -544,7 +545,8 @@ router.put('/:examId/schedule/:scheduleId', requireExamContext, async (req, res,
       err.status = 404;
       throw err;
     }
-    const updated = { ...doc.toObject(), ...req.body, _id: doc._id };
+    const safeBody = sanitizeUpdateBody(req.body, ['examId', 'sessionId']);
+    const updated = { ...doc.toObject(), ...safeBody, _id: doc._id };
     const conflicts = await validateScheduleConflicts({
       tenantId: req.tenantId,
       sessionId: req.examScope.sessionId,
@@ -554,7 +556,7 @@ router.put('/:examId/schedule/:scheduleId', requireExamContext, async (req, res,
     });
     if (conflicts.length) return res.status(409).json({ conflicts });
 
-    Object.assign(doc, req.body);
+    Object.assign(doc, safeBody);
     await doc.save();
     res.json(doc);
   } catch (e) {

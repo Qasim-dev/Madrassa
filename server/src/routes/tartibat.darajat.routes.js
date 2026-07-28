@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Darjah } from '../models/Darjah.js';
 import { Subject } from '../models/Subject.js';
 import { SubjectBook } from '../models/SubjectBook.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const router = Router();
 
@@ -111,7 +112,7 @@ router.put('/:id', async (req, res, next) => {
     await assertAssignmentsValid(req.tenantId, req.params.id, subjectIds, mergedAssignments);
     const doc = await Darjah.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
-      { $set: req.body },
+      { $set: sanitizeUpdateBody(req.body) },
       { new: true, runValidators: true }
     )
       .populate('sessionId')

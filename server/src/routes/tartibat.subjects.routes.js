@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { Subject } from '../models/Subject.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.put('/:id', async (req, res, next) => {
   try {
     const doc = await Subject.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
-      { $set: req.body },
+      { $set: sanitizeUpdateBody(req.body) },
       { new: true, runValidators: true }
     );
     if (!doc) return res.status(404).json({ message: 'Not found' });

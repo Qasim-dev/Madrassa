@@ -11,6 +11,7 @@ import { uploadFinanceReceipt } from '../config/upload.js';
 import { FUND_TYPES, TX_STATUSES } from '../constants/financeEnums.js';
 import { Student } from '../models/Student.js';
 import { Teacher } from '../models/Teacher.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const router = Router();
 
@@ -209,7 +210,7 @@ router.put('/accounts/:id', async (req, res, next) => {
   try {
     const doc = await FinanceAccount.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
-      { $set: req.body },
+      { $set: sanitizeUpdateBody(req.body, ['balance']) },
       { new: true }
     );
     if (!doc) return res.status(404).json({ message: 'Not found' });

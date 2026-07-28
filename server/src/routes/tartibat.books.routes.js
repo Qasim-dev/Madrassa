@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { SubjectBook } from '../models/SubjectBook.js';
 import { Subject } from '../models/Subject.js';
 import { Darjah } from '../models/Darjah.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const router = Router();
 
@@ -117,7 +118,7 @@ router.put('/:id', async (req, res, next) => {
     const subjectId = req.body.subjectId ?? existing.subjectId;
     const darjahId = req.body.darjahId ?? existing.darjahId;
     await assertBookRefs(req.tenantId, subjectId, darjahId);
-    const update = { ...req.body };
+    const update = sanitizeUpdateBody(req.body);
     if (req.body.totalPages !== undefined) {
       update.totalPages = validateTotalPages(req.body.totalPages);
     }

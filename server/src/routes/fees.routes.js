@@ -5,6 +5,7 @@ import { Student } from '../models/Student.js';
 import { StudentFeeBalance } from '../models/StudentFeeBalance.js';
 import { FeeAuditLog } from '../models/FeeAuditLog.js';
 import { recordFeeCollection } from '../services/financeFlows.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const router = Router();
 
@@ -77,7 +78,7 @@ router.post('/items', async (req, res, next) => {
 
 router.put('/items/:id', async (req, res, next) => {
   try {
-    const body = { ...req.body };
+    const body = sanitizeUpdateBody(req.body);
     if (body.darjahId === '') body.darjahId = null;
     const doc = await FeeItem.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
@@ -213,7 +214,7 @@ router.put('/balances/:id', async (req, res, next) => {
   try {
     const doc = await StudentFeeBalance.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
-      { $set: req.body },
+      { $set: sanitizeUpdateBody(req.body) },
       { new: true }
     ).populate('studentId');
     if (!doc) return res.status(404).json({ message: 'Not found' });

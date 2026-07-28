@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { TimeSlot } from '../models/TimeSlot.js';
 import { TimetableEntry } from '../models/TimetableEntry.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.put('/slots/:id', async (req, res, next) => {
   try {
     const doc = await TimeSlot.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
-      { $set: req.body },
+      { $set: sanitizeUpdateBody(req.body) },
       { new: true, runValidators: true }
     );
     if (!doc) return res.status(404).json({ message: 'Not found' });
@@ -153,7 +154,7 @@ router.put('/entries/:id', async (req, res, next) => {
 
     const doc = await TimetableEntry.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
-      { $set: req.body },
+      { $set: sanitizeUpdateBody(req.body) },
       { new: true, runValidators: true }
     )
       .populate('sessionId')

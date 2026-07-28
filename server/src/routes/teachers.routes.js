@@ -12,6 +12,7 @@ import {
   resolveBookId,
 } from '../utils/excelImportResolve.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
+import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 
 const router = Router();
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -226,7 +227,7 @@ router.put('/:id', async (req, res, next) => {
   try {
     const doc = await Teacher.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
-      { $set: req.body },
+      { $set: sanitizeUpdateBody(req.body) },
       { new: true, runValidators: true }
     )
       .populate('assignments.sessionId')
