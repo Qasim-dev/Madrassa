@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
-    "axios": "^1.15.0",
+    "@tanstack/react-virtual": "^3.14.8",
     "bootstrap": "^5.3.8",
     "i18next": "^26.0.4",
     "qrcode": "^1.5.4",

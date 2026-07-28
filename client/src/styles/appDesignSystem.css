@@ -1,43 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
-   E-Jamia Pro — unified design tokens & reusable UI primitives
+   E-Jamia Pro — reusable UI primitives
+   Color/spacing tokens: design-system/tokens.css (--ds-* → --app-*)
    ═══════════════════════════════════════════════════════════════ */
-
-:root {
-  --app-primary: #0f8f5f;
-  --app-primary-hover: #0b7a50;
-  --app-primary-dark: #0b6e49;
-  --app-primary-deep: #075c3b;
-  --app-primary-soft: rgba(15, 143, 95, 0.09);
-  --app-primary-ring: rgba(15, 143, 95, 0.3);
-
-  --app-secondary: #6f7480;
-  --app-secondary-soft: #f1f1ed;
-
-  --app-accent: #c9a227;
-  --app-accent-soft: rgba(201, 162, 39, 0.14);
-
-  --app-surface: #ffffff;
-  --app-surface-muted: #f8f8f6;
-
-  --app-text: #17181c;
-  --app-text-muted: #575b66;
-  --app-text-subtle: #9aa0ab;
-
-  --app-border: #eae9e4;
-  --app-border-strong: #dcdbd4;
-
-  --app-gradient-primary: linear-gradient(180deg, #12996a 0%, var(--app-primary) 60%, #0c8154 100%);
-  --app-gradient-hero: linear-gradient(125deg, #0b6e49 0%, #0f8f5f 55%, #0b7a50 100%);
-  --app-gradient-panel: var(--app-surface-muted);
-
-  --app-radius-sm: 0.5rem;
-  --app-radius-md: 0.75rem;
-  --app-radius-lg: 1rem;
-  --app-radius-pill: 999px;
-
-  --app-shadow-tab-active: 0 2px 8px rgba(15, 143, 95, 0.28);
-  --app-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
-}
 
 /* ─── App tabs ──────────────────────────────────────────────── */
 
