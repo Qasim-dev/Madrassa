@@ -21,14 +21,18 @@ const storage = multer.diskStorage({
 export const uploadPhoto = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = /^image\/(jpeg|png|webp|gif)$/i.test(file.mimetype);
+    cb(null, ok);
+  },
 });
 
-/** Tenant / institution logo (sidebar, prints, cards) */
+/** Tenant / institution logo (sidebar, prints, cards) — raster only (no SVG/XSS) */
 export const uploadLogo = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const ok = /^image\/(jpeg|png|webp|gif|svg\+xml)$/i.test(file.mimetype);
+    const ok = /^image\/(jpeg|png|webp|gif)$/i.test(file.mimetype);
     cb(null, ok);
   },
 });
