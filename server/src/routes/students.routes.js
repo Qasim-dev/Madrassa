@@ -17,6 +17,7 @@ import {
 import { escapeRegex } from '../utils/escapeRegex.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { withNotDeleted, NOT_DELETED } from '../utils/softDelete.js';
 
 const router = Router();
 const uploadExcel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -188,7 +189,7 @@ router.post('/import', uploadExcel.single('file'), async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const { q, gradeId, sessionId, darjahId, subjectId, bookId } = req.query;
-    const filter = { tenantId: req.tenantId };
+    const filter = withNotDeleted({ tenantId: req.tenantId });
     if (gradeId) filter.gradeId = gradeId;
     if (darjahId && mongoose.isValidObjectId(darjahId)) filter.darjahId = darjahId;
     if (subjectId && mongoose.isValidObjectId(subjectId)) filter.subjectId = subjectId;
@@ -275,7 +276,7 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const gradePop = { path: 'responsibleTeacherId' };
-    const doc = await Student.findOne({ _id: req.params.id, tenantId: req.tenantId })
+    const doc = await Student.findOne({ _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED })
       .populate('sessionId')
       .populate('darjahId')
       .populate('subjectId')
@@ -324,7 +325,7 @@ router.post('/', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const existing = await Student.findOne({ _id: req.params.id, tenantId: req.tenantId });
+    const existing = await Student.findOne({ _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED });
     if (!existing) return res.status(404).json({ message: 'Not found' });
 
     const body = sanitizeUpdateBody(req.body, ['rollNumber', 'photoUrl']);
@@ -371,9 +372,13 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', requirePermission('students:delete'), async (req, res, next) => {
   try {
-    const doc = await Student.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
+    const doc = await Student.findOneAndUpdate(
+      { _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED },
+      { $set: { deletedAt: new Date() } },
+      { new: true }
+    );
     if (!doc) return res.status(404).json({ message: 'Not found' });
-    res.json({ ok: true });
+    res.json({ ok: true, softDeleted: true });
   } catch (e) {
     next(e);
   }
@@ -384,7 +389,7 @@ router.post('/:id/photo', uploadPhoto.single('photo'), async (req, res, next) =>
     if (!req.file) return res.status(400).json({ message: 'No file' });
     const photoUrl = `/uploads/${req.file.filename}`;
     const doc = await Student.findOneAndUpdate(
-      { _id: req.params.id, tenantId: req.tenantId },
+      { _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED },
       { $set: { photoUrl } },
       { new: true }
     );

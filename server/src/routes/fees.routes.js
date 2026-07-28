@@ -6,6 +6,7 @@ import { StudentFeeBalance } from '../models/StudentFeeBalance.js';
 import { FeeAuditLog } from '../models/FeeAuditLog.js';
 import { recordFeeCollection } from '../services/financeFlows.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { withNotDeleted, NOT_DELETED } from '../utils/softDelete.js';
 
 const router = Router();
 
@@ -49,7 +50,7 @@ function snapshotBalance(bal) {
 router.get('/items', async (req, res, next) => {
   try {
     const { tab, sessionId } = req.query;
-    const filter = { tenantId: req.tenantId };
+    const filter = withNotDeleted({ tenantId: req.tenantId });
     if (tab) filter.tab = tab;
     if (sessionId && mongoose.isValidObjectId(sessionId)) filter.sessionId = sessionId;
     const list = await FeeItem.find(filter)
@@ -81,7 +82,7 @@ router.put('/items/:id', async (req, res, next) => {
     const body = sanitizeUpdateBody(req.body);
     if (body.darjahId === '') body.darjahId = null;
     const doc = await FeeItem.findOneAndUpdate(
-      { _id: req.params.id, tenantId: req.tenantId },
+      { _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED },
       { $set: body },
       { new: true }
     ).populate('darjahId', 'name code');
@@ -94,9 +95,13 @@ router.put('/items/:id', async (req, res, next) => {
 
 router.delete('/items/:id', async (req, res, next) => {
   try {
-    const doc = await FeeItem.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
+    const doc = await FeeItem.findOneAndUpdate(
+      { _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED },
+      { $set: { deletedAt: new Date() } },
+      { new: true }
+    );
     if (!doc) return res.status(404).json({ message: 'Not found' });
-    res.json({ ok: true });
+    res.json({ ok: true, softDeleted: true });
   } catch (e) {
     next(e);
   }
@@ -109,7 +114,7 @@ router.delete('/items/:id', async (req, res, next) => {
  */
 router.post('/items/:id/apply', async (req, res, next) => {
   try {
-    const item = await FeeItem.findOne({ _id: req.params.id, tenantId: req.tenantId });
+    const item = await FeeItem.findOne({ _id: req.params.id, tenantId: req.tenantId, ...NOT_DELETED });
     if (!item) return res.status(404).json({ message: 'Fee item not found' });
 
     const { studentId, customAmount } = req.body || {};
@@ -118,7 +123,7 @@ router.post('/items/:id/apply', async (req, res, next) => {
       return res.status(400).json({ message: 'Amount must be greater than 0' });
     }
 
-    const studentFilter = { tenantId: req.tenantId };
+    const studentFilter = withNotDeleted({ tenantId: req.tenantId });
     if (item.sessionId) studentFilter.sessionId = item.sessionId;
     if (studentId && mongoose.isValidObjectId(studentId)) {
       studentFilter._id = studentId;
@@ -165,6 +170,7 @@ router.get('/balances', async (req, res, next) => {
       const studIds = await Student.find({
         tenantId: req.tenantId,
         sessionId,
+        ...NOT_DELETED,
       }).distinct('_id');
       filter.studentId = { $in: studIds };
     }
