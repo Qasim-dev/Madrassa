@@ -33,10 +33,13 @@ const feeItemSchema = new mongoose.Schema(
       ref: 'Grade',
       default: null,
     },
+    deletedAt: { type: Date, default: null, index: true },
   },
   { timestamps: true }
 );
 
 tenantPlugin(feeItemSchema);
+feeItemSchema.index({ tenantId: 1, sessionId: 1, tab: 1 });
+feeItemSchema.index({ tenantId: 1, darjahId: 1 });
 
 export const FeeItem = mongoose.model('FeeItem', feeItemSchema);

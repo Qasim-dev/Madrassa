@@ -98,11 +98,19 @@ const studentSchema = new mongoose.Schema(
     },
     enrollmentDate: { type: Date, default: null },
     exitDate: { type: Date, default: null },
+    /** Soft delete — set on archive; excluded from default lists */
+    deletedAt: { type: Date, default: null, index: true },
   },
   { timestamps: true }
 );
 
 tenantPlugin(studentSchema);
-studentSchema.index({ tenantId: 1, studentId: 1 }, { unique: true });
+studentSchema.index(
+  { tenantId: 1, studentId: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: null } }
+);
+studentSchema.index({ tenantId: 1, sessionId: 1, darjahId: 1 });
+studentSchema.index({ tenantId: 1, sessionId: 1, currentGradeId: 1 });
+studentSchema.index({ tenantId: 1, sessionId: 1, subjectId: 1 });
 
 export const Student = mongoose.model('Student', studentSchema);

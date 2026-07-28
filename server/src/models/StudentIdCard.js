@@ -43,5 +43,7 @@ tenantPlugin(studentIdCardSchema);
 studentIdCardSchema.index({ tenantId: 1, studentId: 1, sessionId: 1 }, { unique: true });
 studentIdCardSchema.index({ tenantId: 1, cardNumber: 1 }, { unique: true });
 studentIdCardSchema.index({ tenantId: 1, qrToken: 1 }, { unique: true });
+/** Public verify looks up by token alone */
+studentIdCardSchema.index({ qrToken: 1 }, { unique: true });
 
 export const StudentIdCard = mongoose.model('StudentIdCard', studentIdCardSchema);

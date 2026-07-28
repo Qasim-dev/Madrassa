@@ -42,5 +42,7 @@ const teacherSchema = new mongoose.Schema(
 );
 
 tenantPlugin(teacherSchema);
+teacherSchema.index({ tenantId: 1, status: 1 });
+teacherSchema.index({ tenantId: 1, 'assignments.sessionId': 1 });
 
 export const Teacher = mongoose.model('Teacher', teacherSchema);
