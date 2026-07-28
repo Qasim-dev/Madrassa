@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import PageHeading from '../components/PageHeading'
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import {
   useGetUsersQuery,
   useCreateUserMutation,
@@ -21,6 +22,7 @@ export default function UsersPage() {
   const [deleteUser] = useDeleteUserMutation()
   const [form, setForm] = useState({ email: '', password: '', role: 'staff' })
   const [error, setError] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   async function onCreate(e) {
     e.preventDefault()
@@ -62,11 +64,7 @@ export default function UsersPage() {
           <button
             type="button"
             className="btn btn-sm btn-outline-danger"
-            onClick={() => {
-              if (window.confirm(en ? 'Delete user?' : 'صارف حذف کریں؟')) {
-                deleteUser(row._id || row.id)
-              }
-            }}
+            onClick={() => setDeleteTarget(row)}
           >
             {t('common.delete')}
           </button>
@@ -122,19 +120,26 @@ export default function UsersPage() {
             />
           </div>
           <div className="col-md-3">
-            <button type="submit" className="btn btn-success" disabled={creating}>
-              {creating ? t('common.loading') : en ? 'Add user' : 'صارف شامل کریں'}
+            <button type="submit" className="btn btn-success w-100" disabled={creating}>
+              {en ? 'Create user' : 'صارف بنائیں'}
             </button>
           </div>
         </div>
-        {error ? (
-          <div className="alert alert-danger py-2 small mt-2 mb-0" role="alert">
-            {error}
-          </div>
-        ) : null}
+        {error ? <p className="text-danger small mt-2 mb-0">{error}</p> : null}
       </form>
 
-      <DataTable isLoading={isLoading} columns={columns} rows={users} />
+      <DataTable columns={columns} rows={users} loading={isLoading} rowKey={(r) => r._id || r.id} />
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        title={t('common.confirmDeleteTitle')}
+        message={en ? 'Delete user?' : 'صارف حذف کریں؟'}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={async () => {
+          await deleteUser(deleteTarget._id || deleteTarget.id).unwrap()
+          refetch()
+        }}
+      />
     </div>
   )
 }

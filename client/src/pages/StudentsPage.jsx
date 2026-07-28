@@ -16,6 +16,7 @@ import { downloadCsv } from '../shared/exportCsv'
 import DataTable from '../components/DataTable'
 import PageHeading from '../components/PageHeading'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
+import { useFlash } from '../app/flash.jsx'
 import FilterDrawer, { FilterToolbar } from '../components/FilterDrawer'
 import {
   IconUpload,
@@ -45,6 +46,7 @@ export default function StudentsPage() {
   const lng = i18n.language
   const en = lng?.toLowerCase().startsWith('en')
   const navigate = useNavigate()
+  const { showFlash } = useFlash()
   const [searchParams, setSearchParams] = useSearchParams()
   const [filterOpen, setFilterOpen] = useState(false)
   const [deleteStudentTarget, setDeleteStudentTarget] = useState(null)
@@ -167,10 +169,10 @@ export default function StudentsPage() {
       const msg =
         (lng === 'ur' ? 'امپورٹ مکمل' : 'Import complete') +
         `\n${lng === 'ur' ? 'کل' : 'Total'}: ${res.total}\n${lng === 'ur' ? 'ہو گیا' : 'Created'}: ${res.created}\n${lng === 'ur' ? 'فیل' : 'Failed'}: ${res.failed}`
-      alert(msg)
+      showFlash(msg, 'success')
       refetch()
     } catch (err) {
-      alert(err?.data?.message || err?.error || 'Import failed')
+      showFlash(err?.data?.message || err?.error || 'Import failed')
     }
   }
 
@@ -348,6 +350,24 @@ export default function StudentsPage() {
         }}
       >
         <div className="filter-drawer__field">
+          <label className="filter-drawer__label" htmlFor="st-filter-subject">
+            {lng === 'ur' ? 'شعبہ جات' : 'Subject'}
+          </label>
+          <AppSelect
+            id="st-filter-subject"
+            className="w-100"
+            value={draft.subjectId}
+            onChange={(e) => setDraft((prev) => ({ ...prev, subjectId: e.target.value }))}
+          >
+            <option value="">{lng === 'ur' ? 'تمام شعبہ جات' : 'All subjects'}</option>
+            {subjects.map((s) => (
+              <option key={s._id} value={s._id}>
+                {loc(s.name, lng)}
+              </option>
+            ))}
+          </AppSelect>
+        </div>
+        <div className="filter-drawer__field">
           <label className="filter-drawer__label" htmlFor="st-filter-darjah">
             {lng === 'ur' ? 'درجہ' : 'Class / Darjah'}
           </label>
@@ -362,24 +382,6 @@ export default function StudentsPage() {
               <option key={d._id} value={d._id}>
                 {loc(d.name, lng)}
                 {d.code ? ` (${d.code})` : ''}
-              </option>
-            ))}
-          </AppSelect>
-        </div>
-        <div className="filter-drawer__field">
-          <label className="filter-drawer__label" htmlFor="st-filter-subject">
-            {lng === 'ur' ? 'شعبہ جات' : 'Subject'}
-          </label>
-          <AppSelect
-            id="st-filter-subject"
-            className="w-100"
-            value={draft.subjectId}
-            onChange={(e) => setDraft((prev) => ({ ...prev, subjectId: e.target.value }))}
-          >
-            <option value="">{lng === 'ur' ? 'تمام شعبہ جات' : 'All subjects'}</option>
-            {subjects.map((s) => (
-              <option key={s._id} value={s._id}>
-                {loc(s.name, lng)}
               </option>
             ))}
           </AppSelect>

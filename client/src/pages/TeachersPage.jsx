@@ -12,6 +12,7 @@ import DataTable from '../components/DataTable'
 import PageHeading from '../components/PageHeading'
 import TeacherSalaryPanel from '../components/TeacherSalaryPanel'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
+import { useFlash } from '../app/flash.jsx'
 import {
   IconUpload,
   IconDownload,
@@ -28,6 +29,7 @@ export default function TeachersPage() {
   const { t, i18n } = useTranslation()
   const lng = i18n.language
   const navigate = useNavigate()
+  const { showFlash } = useFlash()
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') === 'salary' ? 'salary' : 'list'
 
@@ -71,10 +73,10 @@ export default function TeachersPage() {
       const msg =
         (lng === 'ur' ? 'امپورٹ مکمل' : 'Import complete') +
         `\n${lng === 'ur' ? 'کل' : 'Total'}: ${res.total}\n${lng === 'ur' ? 'ہو گیا' : 'Created'}: ${res.created}\n${lng === 'ur' ? 'فیل' : 'Failed'}: ${res.failed}`
-      alert(msg)
+      showFlash(msg, 'success')
       refetch()
     } catch (err) {
-      alert(err?.data?.message || err?.error || 'Import failed')
+      showFlash(err?.data?.message || err?.error || 'Import failed')
     }
   }
 

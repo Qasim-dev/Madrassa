@@ -23,11 +23,13 @@ import {
   FormRow,
   ModalForm,
 } from '../components/ui'
+import { useFlash } from '../app/flash.jsx'
 
 // ─── Session delete confirmation modal ──────────────────────────────────────
 
 function SessionDeleteModal({ session, onClose, onConfirm, lng }) {
   const { t } = useTranslation()
+  const { showFlash } = useFlash()
 
   // Always fetch fresh counts when the modal opens (never use stale cache)
   const { data: summary, isLoading: summaryLoading } = useGetSessionSummaryQuery(
@@ -45,7 +47,7 @@ function SessionDeleteModal({ session, onClose, onConfirm, lng }) {
       await onConfirm()
       onClose()
     } catch (err) {
-      alert(err?.data?.message || err?.error || t('common.deleteFailed'))
+      showFlash(err?.data?.message || err?.error || t('common.deleteFailed'))
     } finally {
       setBusy(false)
     }

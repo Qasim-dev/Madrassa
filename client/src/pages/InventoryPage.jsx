@@ -28,6 +28,7 @@ import { formatDisplayDate } from '../shared/formatDisplayDate'
 import { useCalendarMode } from '../app/calendarMode'
 import { FL } from '../shared/fieldLabels'
 import PageHeading from '../components/PageHeading'
+import { useFlash } from '../app/flash.jsx'
 import AppDateInput from '../components/AppDateInput'
 import AppModalShell from '../components/AppModalShell'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
@@ -122,6 +123,7 @@ export default function InventoryPage() {
   const { t, i18n } = useTranslation()
   const lng = i18n.language
   const isUr = lng.split('-')[0] === 'ur'
+  const { showFlash } = useFlash()
   const { mode } = useCalendarMode()
   const token = useSelector((s) => s.auth.token)
   const activeSessionId = useSelector((s) => s.session.activeSessionId)
@@ -344,7 +346,7 @@ export default function InventoryPage() {
   async function submitItem(e) {
     e.preventDefault()
     if (!itemForm.name.ur && !itemForm.name.en) {
-      alert(t('inventory.validationName'))
+      showFlash(t('inventory.validationName'))
       return
     }
     const qty = Number(itemForm.quantity) || 0
@@ -391,7 +393,7 @@ export default function InventoryPage() {
       clearItemForm()
       setItemModalOpen(false)
     } catch (err) {
-      alert(err?.data?.message || err?.error || 'Save failed')
+      showFlash(err?.data?.message || err?.error || 'Save failed')
     }
   }
 
@@ -399,7 +401,7 @@ export default function InventoryPage() {
     e.preventDefault()
     if (!movementValidation.valid) {
       const msg = Object.values(movementValidation.errors).find(Boolean)
-      if (msg) alert(msg)
+      if (msg) showFlash(msg)
       return
     }
     const q = Number(movForm.quantity)
@@ -432,7 +434,7 @@ export default function InventoryPage() {
       resetMovForm()
       setMovModalOpen(false)
     } catch (err) {
-      alert(err?.data?.message || err?.error || 'Save failed')
+      showFlash(err?.data?.message || err?.error || 'Save failed')
     }
   }
 
@@ -453,7 +455,7 @@ export default function InventoryPage() {
       headers: { authorization: `Bearer ${token}` },
     })
     if (!res.ok) {
-      alert(t('inventory.exportFailed'))
+      showFlash(t('inventory.exportFailed'))
       return
     }
     const blob = await res.blob()

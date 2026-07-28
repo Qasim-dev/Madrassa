@@ -37,6 +37,7 @@ import FilterDrawer, { FilterToolbar } from '../components/FilterDrawer'
 import { EXPENSE_CATEGORIES, FUND_SOURCES, FUND_TYPES, TX_STATUSES } from '../shared/financeEnums.js'
 import AppModalShell from '../components/AppModalShell'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
+import { useFlash } from '../app/flash.jsx'
 import { BtnIconLabel, IconFileSpreadsheet, IconPrint, IconPencil, IconTrash } from '../components/ListToolbarIcons'
 import './financeDashboard.css'
 
@@ -157,6 +158,7 @@ export default function FinancePage() {
   const lng = i18n.language
   const { mode } = useCalendarMode()
   const isUr = lng.split('-')[0] === 'ur'
+  const { showFlash } = useFlash()
   const token = useSelector((s) => s.auth.token)
   const activeSessionId = useSelector((s) => s.session.activeSessionId)
   const sessArg = activeSessionId ? { sessionId: activeSessionId } : {}
@@ -497,7 +499,7 @@ export default function FinancePage() {
       }
       closeTxModal()
     } catch (err) {
-      alert(err?.data?.message || err?.error || 'Save failed')
+      showFlash(err?.data?.message || err?.error || 'Save failed')
     }
   }
 
@@ -538,7 +540,7 @@ export default function FinancePage() {
       headers: { authorization: `Bearer ${token}` },
     })
     if (!res.ok) {
-      alert(t('finance.exportFailed'))
+      showFlash(t('finance.exportFailed'))
       return
     }
     const blob = await res.blob()

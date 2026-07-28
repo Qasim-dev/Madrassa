@@ -19,6 +19,7 @@ import { absoluteAssetUrl } from '../shared/assetUrl'
 import { getInstitutionName, getInstitutionInitial } from '../shared/institutionBrand'
 import PageHeading from '../components/PageHeading'
 import { AppInput, FormField, FormRow } from '../components/ui'
+import { useFlash } from '../app/flash.jsx'
 
 function SettingsSection({ title, hint, children, onSave, saveLabel, saveVariant = 'success', formId, className = '' }) {
   return (
@@ -45,6 +46,7 @@ export default function ProfilePage() {
   const en = lng?.startsWith('en')
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { showFlash } = useFlash()
   const logoInputRef = useRef(null)
 
   const { data: me, refetch } = useGetMeQuery()
@@ -110,7 +112,7 @@ export default function ProfilePage() {
       await uploadLogo(fd).unwrap()
       refetchSettings()
     } catch (err) {
-      alert(err?.data?.message || err?.error || (en ? 'Logo upload failed' : 'لوگو اپ لوڈ نہیں ہوا'))
+      showFlash(err?.data?.message || err?.error || (en ? 'Logo upload failed' : 'لوگو اپ لوڈ نہیں ہوا'))
     }
   }
 

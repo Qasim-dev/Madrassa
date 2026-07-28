@@ -18,6 +18,7 @@ import AppModalShell from './AppModalShell'
 import ConfirmDeleteModal from './ConfirmDeleteModal'
 import { AppInput, AppSelect, AppTextarea } from './ui'
 import { BtnIconLabel, IconPlus, IconPencil, IconTrash, IconPrint } from './ListToolbarIcons'
+import { useFlash } from '../app/flash.jsx'
 
 function num(v) {
   const n = parseFloat(String(v).replace(/,/g, ''))
@@ -102,6 +103,7 @@ function mapRowToForm(row) {
 
 export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embedded }) {
   const { t } = useTranslation()
+  const { showFlash } = useFlash()
   const activeSessionId = useSelector((s) => s.session.activeSessionId)
   const { data: financeAccounts = [] } = useGetFinanceAccountsQuery()
   const [paySlip, { isLoading: payingSlip }] = usePayTeacherSalarySlipMutation()
@@ -197,7 +199,7 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
       paymentStatus: form.paymentStatus,
     }
     if (payload.basicSalary <= 0) {
-      alert(en ? 'Enter basic salary.' : 'بنیادی تنخواہ درج کریں۔')
+      showFlash(en ? 'Enter basic salary.' : 'بنیادی تنخواہ درج کریں۔')
       return
     }
     try {
@@ -205,7 +207,7 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
       else await createSalary(payload).unwrap()
       setModal(null)
     } catch (err) {
-      alert(err?.data?.message || err?.error || 'Save failed')
+      showFlash(err?.data?.message || err?.error || 'Save failed')
     }
   }
 
@@ -322,7 +324,7 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
               onClick={async () => {
                 const acc = financeAccounts[0]?._id
                 if (!acc) {
-                  alert(en ? 'Create a cash/bank account under Finance first.' : 'پہلے آمد و خرچ میں کھاتہ بنائیں۔')
+                  showFlash(en ? 'Create a cash/bank account under Finance first.' : 'پہلے آمد و خرچ میں کھاتہ بنائیں۔')
                   return
                 }
                 try {
@@ -335,7 +337,7 @@ export default function TeacherSalaryPanel({ teachers, lng, fixedTeacherId, embe
                     },
                   }).unwrap()
                 } catch (err) {
-                  alert(err?.data?.message || err?.error || 'Failed')
+                  showFlash(err?.data?.message || err?.error || 'Failed')
                 }
               }}
             >
