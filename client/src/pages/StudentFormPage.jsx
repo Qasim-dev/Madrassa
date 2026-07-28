@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
@@ -20,6 +20,15 @@ import {
   buildPayload,
 } from '../shared/studentFormUtils'
 import StudentEnrollmentForm from '../components/StudentEnrollmentForm'
+import ConfirmActionModal from '../components/ConfirmActionModal'
+import { useFlash } from '../app/flash.jsx'
+import { useUnsavedChangesGuard } from '../shared/useUnsavedChangesGuard'
+import {
+  formatCnicDisplay,
+  isValidCnic,
+  isValidPhone,
+  trimFormStrings,
+} from '../shared/pkValidation'
 
 export default function StudentFormPage() {
   const { id } = useParams()
@@ -27,6 +36,7 @@ export default function StudentFormPage() {
   const { t, i18n } = useTranslation()
   const lng = i18n.language
   const lang = uiLang(lng)
+  const { showFlash } = useFlash()
 
   const isNew = !id
   const {
@@ -39,6 +49,14 @@ export default function StudentFormPage() {
   const [enrollTab, setEnrollTab] = useState('basic')
   const [form, setForm] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+
+  const markForm = useCallback((next) => {
+    setDirty(true)
+    setForm(next)
+  }, [])
+
+  const { isBlocked, proceed, reset } = useUnsavedChangesGuard(dirty && !saving)
 
   const activeSessionId = useSelector((s) => s.session.activeSessionId)
   const gradesSessionId = form.sessionId || activeSessionId || ''
@@ -69,12 +87,14 @@ export default function StudentFormPage() {
       setForm(defaultForm())
       setEnrollTab('basic')
       pendingPhotoRef.current = null
+      setDirty(false)
       return
     }
     if (student) {
       setForm(mapStudentRecordToForm(student))
       setEnrollTab('basic')
       pendingPhotoRef.current = null
+      setDirty(false)
     }
   }, [isNew, student])
 
@@ -113,6 +133,7 @@ export default function StudentFormPage() {
     if (!file) return
     pendingPhotoRef.current = file
     const previewUrl = URL.createObjectURL(file)
+    setDirty(true)
     setForm((prev) => {
       if (prev.photoUrl?.startsWith('blob:')) URL.revokeObjectURL(prev.photoUrl)
       return { ...prev, photoUrl: previewUrl }
@@ -135,9 +156,31 @@ export default function StudentFormPage() {
 
   async function save(e) {
     e.preventDefault()
+    const trimmed = trimFormStrings(form)
+    if (!isValidCnic(trimmed.idCard)) {
+      showFlash(t('validation.invalidCnic'))
+      return
+    }
+    if (!isValidPhone(trimmed.phone)) {
+      showFlash(t('validation.invalidPhone'))
+      return
+    }
+    if (!isValidPhone(trimmed.guardian?.phone)) {
+      showFlash(t('validation.invalidPhone'))
+      return
+    }
+    const guardians = Array.isArray(trimmed.guardians) ? trimmed.guardians : []
+    for (const g of guardians) {
+      if (!isValidPhone(g?.phone) || !isValidCnic(g?.idCard)) {
+        showFlash(!isValidCnic(g?.idCard) ? t('validation.invalidCnic') : t('validation.invalidPhone'))
+        return
+      }
+    }
+
     setSaving(true)
     try {
-      const payload = buildPayload(form)
+      if (trimmed.idCard) trimmed.idCard = formatCnicDisplay(trimmed.idCard)
+      const payload = buildPayload(trimmed)
       payload.gradeId = form.gradeId || null
       payload.currentGradeId = form.currentGradeId || null
       payload.previousGradeId = form.previousGradeId || null
@@ -160,7 +203,10 @@ export default function StudentFormPage() {
         }
       }
       pendingPhotoRef.current = null
+      setDirty(false)
       navigate('/students')
+    } catch (err) {
+      showFlash(err?.data?.message || err?.error || err?.message || t('common.error'))
     } finally {
       setSaving(false)
     }
@@ -238,7 +284,7 @@ export default function StudentFormPage() {
         <StudentEnrollmentForm
           isNew={isNew}
           form={form}
-          setForm={setForm}
+          setForm={markForm}
           grades={grades}
           sessions={sessions}
           settings={settings}
@@ -267,6 +313,18 @@ export default function StudentFormPage() {
           </button>
         </div>
       </form>
+
+      <ConfirmActionModal
+        open={isBlocked}
+        title={t('common.unsavedTitle')}
+        message={t('common.unsavedBody')}
+        confirmLabel={t('common.leave')}
+        confirmVariant="danger"
+        onClose={reset}
+        onConfirm={() => {
+          proceed()
+        }}
+      />
     </div>
   )
 }

@@ -1,6 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import ConfirmActionModal from '../components/ConfirmActionModal'
+import { useFlash } from '../app/flash.jsx'
+import { useUnsavedChangesGuard } from '../shared/useUnsavedChangesGuard'
+import {
+  formatCnicDisplay,
+  isValidCnic,
+  isValidPhone,
+  trimFormStrings,
+} from '../shared/pkValidation'
 import {
   useGetTeacherQuery,
   useCreateTeacherMutation,
@@ -80,14 +89,21 @@ export default function TeacherFormPage() {
   const { t, i18n } = useTranslation()
   const lng = i18n.language
   const lang = uiLang(lng)
+  const { showFlash } = useFlash()
 
   const { data: teacher, isLoading, isError } = useGetTeacherQuery(id, { skip: isNew })
   const [createOne] = useCreateTeacherMutation()
   const [updateOne] = useUpdateTeacherMutation()
 
   const [tab, setTab] = useState('basic')
-  const [form, setForm] = useState(defaultForm)
+  const [form, setFormState] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const setForm = useCallback((next) => {
+    setDirty(true)
+    setFormState(next)
+  }, [])
+  const { isBlocked, proceed, reset } = useUnsavedChangesGuard(dirty && !saving)
 
   const { data: sessions = [] } = useGetSessionsQuery()
   const { data: darajat = [] } = useGetDarajatQuery()
@@ -123,12 +139,13 @@ export default function TeacherFormPage() {
 
   useEffect(() => {
     if (isNew) {
-      setForm(defaultForm())
+      setFormState(defaultForm())
       setTab('basic')
+      setDirty(false)
       return
     }
     if (teacher) {
-      setForm({
+      setFormState({
         ...defaultForm(),
         ...teacher,
         dateOfBirth: toInputDate(teacher.dateOfBirth),
@@ -138,13 +155,14 @@ export default function TeacherFormPage() {
         __aDraft: { sessionId: '', darjahId: '', subjectId: '', bookId: '' },
       })
       setTab('basic')
+      setDirty(false)
     }
   }, [isNew, teacher])
 
   // Default country = Pakistan — must run *after* the new-teacher reset above (same tick: this effect is declared next).
   useEffect(() => {
     if (!geoCountries?.length) return
-    setForm((prev) => {
+    setFormState((prev) => {
       if (prev.country?.ur || prev.country?.en) return prev
       const pk = geoCountries.find((x) => x.code === 'PK')
       if (!pk?.name) return prev
@@ -276,16 +294,29 @@ export default function TeacherFormPage() {
 
   async function save(e) {
     e.preventDefault()
+    const trimmed = trimFormStrings(form)
+    if (!isValidCnic(trimmed.idCard)) {
+      showFlash(t('validation.invalidCnic'))
+      return
+    }
+    if (!isValidPhone(trimmed.phone)) {
+      showFlash(t('validation.invalidPhone'))
+      return
+    }
     setSaving(true)
     try {
-      const { __aDraft, _id, tenantId, createdAt, updatedAt, __v, ...payload } = form
+      const { __aDraft, _id, tenantId, createdAt, updatedAt, __v, ...payload } = trimmed
+      if (payload.idCard) payload.idCard = formatCnicDisplay(payload.idCard)
       payload.dateOfBirth = payload.dateOfBirth ? new Date(payload.dateOfBirth) : null
       payload.jobStartDate = payload.jobStartDate ? new Date(payload.jobStartDate) : null
       payload.jobEndDate = payload.jobEndDate ? new Date(payload.jobEndDate) : null
       payload.assignments = normalizeAssignments(payload.assignments)
       if (isNew) await createOne(payload).unwrap()
       else await updateOne({ id, ...payload }).unwrap()
+      setDirty(false)
       navigate('/teachers')
+    } catch (err) {
+      showFlash(err?.data?.message || err?.error || err?.message || t('common.error'))
     } finally {
       setSaving(false)
     }
@@ -750,6 +781,18 @@ export default function TeacherFormPage() {
           </button>
         </div>
       </form>
+
+      <ConfirmActionModal
+        open={isBlocked}
+        title={t('common.unsavedTitle')}
+        message={t('common.unsavedBody')}
+        confirmLabel={t('common.leave')}
+        confirmVariant="danger"
+        onClose={reset}
+        onConfirm={() => {
+          proceed()
+        }}
+      />
     </div>
   )
 }
