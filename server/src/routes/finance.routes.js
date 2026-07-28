@@ -12,6 +12,7 @@ import { FUND_TYPES, TX_STATUSES } from '../constants/financeEnums.js';
 import { Student } from '../models/Student.js';
 import { Teacher } from '../models/Teacher.js';
 import { sanitizeUpdateBody } from '../utils/sanitizeUpdateBody.js';
+import { recordAccountTransfer } from '../services/financeFlows.js';
 
 const router = Router();
 
@@ -635,26 +636,17 @@ router.get('/transfers', async (req, res, next) => {
 router.post('/transfers', async (req, res, next) => {
   try {
     const { fromAccountId, toAccountId, amount, date, title } = req.body;
-    const amt = Number(amount);
-    const from = await FinanceAccount.findOne({ _id: fromAccountId, tenantId: req.tenantId });
-    const to = await FinanceAccount.findOne({ _id: toAccountId, tenantId: req.tenantId });
-    if (!from || !to) {
-      return res.status(400).json({ message: 'Invalid accounts' });
-    }
-    from.currentAmount -= amt;
-    to.currentAmount += amt;
-    await from.save();
-    await to.save();
-    const doc = await AccountTransfer.create({
+    const doc = await recordAccountTransfer({
       tenantId: req.tenantId,
       fromAccountId,
       toAccountId,
-      amount: amt,
-      date: new Date(date),
-      title: title || {},
+      amount,
+      date,
+      title,
     });
     res.status(201).json(doc);
   } catch (e) {
+    if (e.status) return res.status(e.status).json({ message: e.message });
     next(e);
   }
 });
