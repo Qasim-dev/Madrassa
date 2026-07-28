@@ -5,11 +5,29 @@ import { useLazyGetSearchSuggestionsQuery } from '../services/api'
 import { loc } from '../shared/localized'
 import { AppInput } from './ui'
 
+function fallbackPathForType(type, q) {
+  const encoded = encodeURIComponent(q)
+  switch (type) {
+    case 'teacher':
+      return `/teachers?q=${encoded}`
+    case 'darjah':
+      return '/tartibat/darajat'
+    case 'subject':
+      return '/tartibat/subjects'
+    case 'book':
+      return '/tartibat/books'
+    case 'student':
+    default:
+      return `/students?q=${encoded}`
+  }
+}
+
 export default function AppHeaderSearch() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [value, setValue] = useState('')
   const [focused, setFocused] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
   const [trigger, { data, isFetching }] = useLazyGetSearchSuggestionsQuery()
   const rootRef = useRef(null)
   const lng = i18n.language
@@ -18,17 +36,38 @@ export default function AppHeaderSearch() {
   const hasItems = items.length > 0
 
   const normalizedValue = useMemo(() => value.trim(), [value])
-  const open = focused && normalizedValue.length >= 2 && (isFetching || hasItems)
+  const open = focused && normalizedValue.length >= 2
+
+  function goToItem(item) {
+    if (!item) return
+    if (item.to) navigate(item.to)
+    else navigate(fallbackPathForType(item.type, normalizedValue))
+    setFocused(false)
+    setActiveIndex(-1)
+  }
 
   function submit(e) {
     e.preventDefault()
     const q = normalizedValue
-    if (q) navigate(`/students?q=${encodeURIComponent(q)}`)
-    else navigate('/students')
+    if (!q) {
+      navigate('/students')
+      return
+    }
+    if (activeIndex >= 0 && items[activeIndex]) {
+      goToItem(items[activeIndex])
+      return
+    }
+    if (items[0]) {
+      goToItem(items[0])
+      return
+    }
+    navigate(`/students?q=${encodeURIComponent(q)}`)
+    setFocused(false)
   }
 
   useEffect(() => {
     const q = normalizedValue
+    setActiveIndex(-1)
     if (!q || q.length < 2) return
     const tmr = setTimeout(() => {
       trigger({ q, limit: 8 })
@@ -49,8 +88,7 @@ export default function AppHeaderSearch() {
   }, [])
 
   function onPick(item) {
-    if (item?.to) navigate(item.to)
-    setFocused(false)
+    goToItem(item)
   }
 
   function labelFor(item) {
@@ -66,6 +104,20 @@ export default function AppHeaderSearch() {
     if (item?.type === 'teacher') return item?.meta?.phone || item?.meta?.idCard || ''
     if (item?.type === 'darjah') return item?.meta?.code ? String(item.meta.code) : ''
     return ''
+  }
+
+  function onKeyDown(e) {
+    if (!open || !hasItems) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((i) => (i + 1) % items.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((i) => (i <= 0 ? items.length - 1 : i - 1))
+    } else if (e.key === 'Escape') {
+      setFocused(false)
+      setActiveIndex(-1)
+    }
   }
 
   return (
@@ -92,22 +144,36 @@ export default function AppHeaderSearch() {
             // Let click on a suggestion register first.
             setTimeout(() => setFocused(false), 120)
           }}
+          onKeyDown={onKeyDown}
           autoComplete="off"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls="app-global-search-listbox"
+          aria-autocomplete="list"
+          aria-activedescendant={activeIndex >= 0 ? `app-search-opt-${activeIndex}` : undefined}
         />
         {open ? (
-          <div className="app-header-search__dropdown" role="listbox" aria-label={t('header.searchLabel')}>
+          <div
+            id="app-global-search-listbox"
+            className="app-header-search__dropdown"
+            role="listbox"
+            aria-label={t('header.searchLabel')}
+          >
             {isFetching ? (
               <div className="app-header-search__hint">{lng === 'ur' ? 'تلاش…' : 'Searching…'}</div>
             ) : null}
             {!isFetching && !hasItems ? (
               <div className="app-header-search__hint">{lng === 'ur' ? 'کوئی نتیجہ نہیں' : 'No matches'}</div>
             ) : null}
-            {items.map((it) => (
+            {items.map((it, idx) => (
               <button
                 key={`${it.type}:${it.id}`}
+                id={`app-search-opt-${idx}`}
                 type="button"
-                className="app-header-search__item"
+                className={`app-header-search__item${idx === activeIndex ? ' is-active' : ''}`}
                 role="option"
+                aria-selected={idx === activeIndex}
+                onMouseEnter={() => setActiveIndex(idx)}
                 onClick={() => onPick(it)}
               >
                 <span className="app-header-search__itemTitle">{labelFor(it)}</span>
