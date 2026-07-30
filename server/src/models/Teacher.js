@@ -15,6 +15,7 @@ const teacherSchema = new mongoose.Schema(
   {
     name: { type: localizedSchema, required: true },
     parentage: { type: localizedSchema, default: () => ({}) },
+    gender: { type: String, enum: ['', 'male', 'female'], default: '' },
     idCard: { type: String, default: '' },
     phone: { type: String, default: '' },
     maritalStatus: { type: String, enum: ['', 'single', 'married', 'widowed', 'divorced'], default: '' },

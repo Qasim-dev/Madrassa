@@ -33,7 +33,11 @@ export function nameLocRequired(messageKey = 'validation.nameRequired') {
 
 export const sessionFormSchema = {
   title: required('validation.required'),
-  endDate: dateBefore('startDate', 'validation.dateBefore'),
+  startDate: required('validation.sessionStartRequired'),
+  endDate: compose(
+    required('validation.sessionEndRequired'),
+    dateBefore('startDate', 'validation.dateBefore')
+  ),
 }
 
 export const subjectFormSchema = {
@@ -41,7 +45,7 @@ export const subjectFormSchema = {
   'name.ur': (_v, values, t) => {
     const ur = String(values?.name?.ur || '').trim()
     const en = String(values?.name?.en || '').trim()
-    return ur || en ? '' : t('validation.nameRequired')
+    return ur || en ? '' : t('validation.subjectNameRequired')
   },
 }
 
@@ -50,7 +54,7 @@ export const darjahFormSchema = {
   'name.ur': (_v, values, t) => {
     const ur = String(values?.name?.ur || '').trim()
     const en = String(values?.name?.en || '').trim()
-    return ur || en ? '' : t('validation.nameRequired')
+    return ur || en ? '' : t('validation.darjahNameRequired')
   },
 }
 
@@ -77,6 +81,12 @@ export const speechFormSchema = {
     const en = String(values?.title?.en || '').trim()
     return ur || en ? '' : t('validation.required')
   },
+  'speaker.ur': (_v, values, t) => {
+    const ur = String(values?.speaker?.ur || '').trim()
+    const en = String(values?.speaker?.en || '').trim()
+    return ur || en ? '' : t('validation.required')
+  },
+  speechDate: required('validation.required'),
 }
 
 export const libraryBookSchema = {

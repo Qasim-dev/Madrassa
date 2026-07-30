@@ -30,6 +30,7 @@ import {
 import {
   useFormValidation,
   compose,
+  required,
   cnic,
   phone,
   notFutureDate,
@@ -37,6 +38,8 @@ import {
 
 const STUDENT_FIELD_IDS = {
   'name.ur': 'f-name-ur',
+  gender: 'f-gender',
+  'fatherName.ur': 'f-father-ur',
   phone: 'f-phone',
   idCard: 'f-id',
   dateOfBirth: 'f-dob',
@@ -44,21 +47,30 @@ const STUDENT_FIELD_IDS = {
 
 const STUDENT_FIELD_TAB = {
   'name.ur': 'basic',
+  gender: 'basic',
+  'fatherName.ur': 'basic',
   phone: 'basic',
   idCard: 'basic',
   dateOfBirth: 'basic',
 }
 
 const studentSchema = {
-  'name.ur': (value, values, t) => {
+  'name.ur': (_value, values, t) => {
     const ur = String(values?.name?.ur || '').trim()
     const en = String(values?.name?.en || '').trim()
     if (!ur && !en) return t('validation.nameRequired')
     return ''
   },
-  phone: compose(phone()),
-  idCard: compose(cnic()),
-  dateOfBirth: compose(notFutureDate()),
+  gender: required('validation.genderRequired'),
+  'fatherName.ur': (_value, values, t) => {
+    const ur = String(values?.fatherName?.ur || '').trim()
+    const en = String(values?.fatherName?.en || '').trim()
+    if (!ur && !en) return t('validation.fatherRequired')
+    return ''
+  },
+  phone: compose(required('validation.phoneRequired'), phone()),
+  idCard: compose(cnic()), // optional; validate format only when filled
+  dateOfBirth: compose(required('validation.dobRequired'), notFutureDate()),
 }
 
 export default function StudentFormPage() {
@@ -91,7 +103,7 @@ export default function StudentFormPage() {
     schema: studentSchema,
     t,
     fieldIds: STUDENT_FIELD_IDS,
-    order: ['name.ur', 'phone', 'idCard', 'dateOfBirth'],
+    order: ['name.ur', 'gender', 'fatherName.ur', 'phone', 'dateOfBirth', 'idCard'],
   })
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)

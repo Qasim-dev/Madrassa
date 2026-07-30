@@ -535,11 +535,21 @@ export default function StudentEnrollmentForm({
               ))}
             </AppSelect>
           </FormField>
-          <FormField k="gender" htmlFor="f-gender" col={4}>
+          <FormField
+            k="gender"
+            htmlFor="f-gender"
+            col={4}
+            required
+            error={fieldErrors.gender}
+          >
             <AppSelect
               id="f-gender"
               value={form.gender || ''}
-              onValueChange={(v) => setForm({ ...form, gender: v })}
+              onValueChange={(v) => {
+                setForm({ ...form, gender: v })
+                onClearError?.('gender')
+              }}
+              onBlur={() => onBlurField?.('gender')}
             >
               <option value="">—</option>
               <option value="male">{lng === 'ur' ? 'مرد' : 'Male'}</option>
@@ -575,7 +585,14 @@ export default function StudentEnrollmentForm({
               }}
             />
           </FormField>
-          <FormField k="fatherUr" htmlFor="f-father-ur" col={4} langField="ur">
+          <FormField
+            k="fatherUr"
+            htmlFor="f-father-ur"
+            col={4}
+            langField="ur"
+            required
+            error={fieldErrors['fatherName.ur']}
+          >
             <AppInput
               id="f-father-ur"
               data-lang-field="ur"
@@ -583,6 +600,7 @@ export default function StudentEnrollmentForm({
               onChange={(e) =>
                 setForm({ ...form, fatherName: { ...form.fatherName, ur: e.target.value } })
               }
+              onBlur={() => onBlurField?.('fatherName.ur')}
             />
           </FormField>
           <FormField k="fatherEn" htmlFor="f-father-en" col={4} langField="en">
@@ -590,12 +608,13 @@ export default function StudentEnrollmentForm({
               id="f-father-en"
               data-lang-field="en"
               value={form.fatherName.en}
-              onChange={(e) =>
+              onChange={(e) => {
                 setForm({ ...form, fatherName: { ...form.fatherName, en: e.target.value } })
-              }
+                onClearError?.('fatherName.ur')
+              }}
             />
           </FormField>
-          <FormField k="phone" htmlFor="f-phone" col={4} error={fieldErrors.phone}>
+          <FormField k="phone" htmlFor="f-phone" col={4} required error={fieldErrors.phone}>
             <AppInput
               id="f-phone"
               latin
@@ -615,7 +634,7 @@ export default function StudentEnrollmentForm({
               onBlur={() => onBlurField?.('idCard')}
             />
           </FormField>
-          <FormField k="dateOfBirth" htmlFor="f-dob" col={4} error={fieldErrors.dateOfBirth}>
+          <FormField k="dateOfBirth" htmlFor="f-dob" col={4} required error={fieldErrors.dateOfBirth}>
             <AppDateInput
               id="f-dob"
               lng={lng}

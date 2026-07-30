@@ -10,6 +10,7 @@ const VIRTUAL_VIEWPORT_MAX = 420
  * Reusable data table — centered columns for RTL/LTR, dashboard-style shell.
  * Large row sets window with @tanstack/react-virtual.
  * @param columns {Array<{ key: string, headerKey?: string, header?: React.ReactNode, cell: Function, numeric?: boolean, hidePrint?: boolean, thClassName?: string, tdClassName?: string }>}
+ * @param fillScroll When true, table body scrolls inside the shell and thead stays sticky.
  */
 export default function DataTable({
   columns,
@@ -20,6 +21,7 @@ export default function DataTable({
   loadingText = '…',
   className = '',
   virtualizeThreshold = VIRTUALIZE_THRESHOLD,
+  fillScroll = false,
 }) {
   const parentRef = useRef(null)
   const useVirtual = !isLoading && rows.length > virtualizeThreshold
@@ -33,7 +35,11 @@ export default function DataTable({
 
   if (isLoading) {
     return (
-      <div className={`data-table-shell content-panel ${className}`.trim()} role="status" aria-busy="true">
+      <div
+        className={`data-table-shell content-panel ${fillScroll ? 'data-table-shell--fill-scroll' : ''} ${className}`.trim()}
+        role="status"
+        aria-busy="true"
+      >
         <div className="data-table__loading text-secondary">{loadingText}</div>
       </div>
     )
@@ -66,10 +72,13 @@ export default function DataTable({
     </thead>
   )
 
+  const shellClass =
+    `data-table-shell content-panel overflow-hidden print-block ${fillScroll ? 'data-table-shell--fill-scroll' : ''} ${className}`.trim()
+
   if (rows.length === 0) {
     return (
-      <div className={`data-table-shell content-panel overflow-hidden print-block ${className}`.trim()}>
-        <div className="table-responsive">
+      <div className={shellClass}>
+        <div className={`table-responsive${fillScroll ? ' data-table__body-scroll' : ''}`}>
           <table className="table data-table mb-0 align-middle">
             {head}
             <tbody>
@@ -85,10 +94,23 @@ export default function DataTable({
     )
   }
 
+  const scrollClass = [
+    'table-responsive',
+    useVirtual ? 'data-table__virtual-scroll' : '',
+    fillScroll ? 'data-table__body-scroll' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const scrollStyle =
+    fillScroll || !useVirtual
+      ? undefined
+      : { maxHeight: VIRTUAL_VIEWPORT_MAX, overflow: 'auto' }
+
   if (!useVirtual) {
     return (
-      <div className={`data-table-shell content-panel overflow-hidden print-block ${className}`.trim()}>
-        <div className="table-responsive">
+      <div className={shellClass}>
+        <div ref={fillScroll ? parentRef : undefined} className={scrollClass} style={scrollStyle}>
           <table className="table data-table mb-0 align-middle">
             {head}
             <tbody>
@@ -110,12 +132,8 @@ export default function DataTable({
   const paddingBottom = virtualRows.length ? totalSize - virtualRows[virtualRows.length - 1].end : 0
 
   return (
-    <div className={`data-table-shell content-panel overflow-hidden print-block ${className}`.trim()}>
-      <div
-        ref={parentRef}
-        className="table-responsive data-table__virtual-scroll"
-        style={{ maxHeight: VIRTUAL_VIEWPORT_MAX, overflow: 'auto' }}
-      >
+    <div className={shellClass}>
+      <div ref={parentRef} className={scrollClass} style={scrollStyle}>
         <table className="table data-table mb-0 align-middle">
           {head}
           <tbody>

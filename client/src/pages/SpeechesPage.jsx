@@ -22,7 +22,11 @@ import { useFormValidation } from '../shared/validation'
 import { speechFormSchema } from '../shared/validation/formSchemas'
 
 const emptyLoc = () => ({ ur: '', en: '' })
-const FIELD_IDS = { 'title.ur': 'sp-title-ur' }
+const FIELD_IDS = {
+  'title.ur': 'sp-title-ur',
+  'speaker.ur': 'sp-sp-ur',
+  speechDate: 'sp-date',
+}
 
 function emptyForm() {
   return {
@@ -299,50 +303,71 @@ export default function SpeechesPage() {
                     />
                   </FormField>
                 </div>
-                <div className="col-12 col-md-4" data-lang-field="ur">
-                  <BilingualLabel k="speechSpeakerUr" htmlFor="sp-sp-ur" />
-                  <AppInput
-                    id="sp-sp-ur"
-                   
-                    dir="rtl"
-                    value={form.speaker.ur}
-                    onChange={(e) => setForm({ ...form, speaker: { ...form.speaker, ur: e.target.value } })}
-                  />
-                </div>
-                <div className="col-12 col-md-4" data-lang-field="en">
-                  <BilingualLabel k="speechSpeakerEn" htmlFor="sp-sp-en" />
-                  <AppInput
-                    id="sp-sp-en"
-                   
-                    value={form.speaker.en}
-                    latin
-                    onChange={(e) => setForm({ ...form, speaker: { ...form.speaker, en: e.target.value } })}
-                  />
-                </div>
-                <div className="col-md-4">
-                  <BilingualLabel k="teacher" htmlFor="sp-teacher" />
-                  <AppSelect
-                    id="sp-teacher"
-                   
-                    value={form.teacherId}
-                    onChange={(e) => setForm({ ...form, teacherId: e.target.value })}
+                <div className="col-12 col-md-4">
+                  <FormField
+                    k="speechSpeakerUr"
+                    htmlFor="sp-sp-ur"
+                    required
+                    langField="ur"
+                    error={fieldErrors['speaker.ur']}
                   >
-                    <option value="">—</option>
-                    {teachers.map((te) => (
-                      <option key={te._id} value={te._id}>
-                        {loc(te.name, lng)}
-                      </option>
-                    ))}
-                  </AppSelect>
+                    <AppInput
+                      id="sp-sp-ur"
+                      dir="rtl"
+                      value={form.speaker.ur}
+                      onChange={(e) => {
+                        const next = { ...form, speaker: { ...form.speaker, ur: e.target.value } }
+                        setForm(next)
+                        revalidateIfError('speaker.ur', next)
+                      }}
+                      onBlur={() => onBlurField('speaker.ur', form)}
+                    />
+                  </FormField>
+                </div>
+                <div className="col-12 col-md-4">
+                  <FormField k="speechSpeakerEn" htmlFor="sp-sp-en" langField="en">
+                    <AppInput
+                      id="sp-sp-en"
+                      value={form.speaker.en}
+                      latin
+                      onChange={(e) => {
+                        const next = { ...form, speaker: { ...form.speaker, en: e.target.value } }
+                        setForm(next)
+                        revalidateIfError('speaker.ur', next)
+                      }}
+                    />
+                  </FormField>
                 </div>
                 <div className="col-md-4">
-                  <BilingualLabel k="date" htmlFor="sp-date" />
-                  <AppDateInput
-                    id="sp-date"
-                    lng={lng}
-                    value={form.speechDate}
-                    onChange={(v) => setForm({ ...form, speechDate: v })}
-                  />
+                  <FormField k="teacher" htmlFor="sp-teacher">
+                    <AppSelect
+                      id="sp-teacher"
+                      value={form.teacherId}
+                      onChange={(e) => setForm({ ...form, teacherId: e.target.value })}
+                    >
+                      <option value="">—</option>
+                      {teachers.map((te) => (
+                        <option key={te._id} value={te._id}>
+                          {loc(te.name, lng)}
+                        </option>
+                      ))}
+                    </AppSelect>
+                  </FormField>
+                </div>
+                <div className="col-md-4">
+                  <FormField k="date" htmlFor="sp-date" required error={fieldErrors.speechDate}>
+                    <AppDateInput
+                      id="sp-date"
+                      lng={lng}
+                      value={form.speechDate}
+                      onChange={(v) => {
+                        const next = { ...form, speechDate: v }
+                        setForm(next)
+                        revalidateIfError('speechDate', next)
+                      }}
+                      onBlur={() => onBlurField('speechDate', form)}
+                    />
+                  </FormField>
                 </div>
                 <div className="col-12 col-md-4" data-lang-field="ur">
                   <BilingualLabel k="speechSummaryUr" htmlFor="sp-sum-ur" />

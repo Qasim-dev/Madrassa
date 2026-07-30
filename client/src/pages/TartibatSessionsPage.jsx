@@ -182,6 +182,7 @@ export default function TartibatSessionsPage() {
   const lng = i18n.language
   const { mode } = useCalendarMode()
   const dispatch = useDispatch()
+  const { showFlash } = useFlash()
   const { data: sessions = [], isLoading, refetch } = useGetSessionsQuery()
   const [createOne] = useCreateSessionMutation()
   const [updateOne] = useUpdateSessionMutation()
@@ -233,11 +234,24 @@ export default function TartibatSessionsPage() {
       focusInvalid(next)
       return
     }
+
+    // At least one session must stay active for the tenant.
+    const willBeActive = !!form.isActive
+    if (!willBeActive) {
+      const otherActive = sessions.some(
+        (s) => s.isActive && (!editing || String(s._id) !== String(editing._id))
+      )
+      if (!otherActive) {
+        showFlash(t('validation.sessionActiveRequired'))
+        return
+      }
+    }
+
     const payload = {
       title: form.title.trim(),
       startDate: form.startDate || null,
       endDate: form.endDate || null,
-      isActive: !!form.isActive,
+      isActive: willBeActive,
     }
     setSaving(true)
     try {
@@ -330,7 +344,7 @@ export default function TartibatSessionsPage() {
         </FormField>
 
         <FormRow className="app-form-row--2">
-          <FormField k="sessionStart" htmlFor="ses-start" col={6} error={fieldErrors.startDate}>
+          <FormField k="sessionStart" htmlFor="ses-start" col={6} required error={fieldErrors.startDate}>
             <AppDateInput
               id="ses-start"
               lng={lng}
@@ -338,12 +352,13 @@ export default function TartibatSessionsPage() {
               onChange={(v) => {
                 const next = { ...form, startDate: v }
                 setForm(next)
+                revalidateIfError('startDate', next)
                 revalidateIfError('endDate', next)
               }}
               onBlur={() => onBlurField('startDate', form)}
             />
           </FormField>
-          <FormField k="sessionEnd" htmlFor="ses-end" col={6} error={fieldErrors.endDate}>
+          <FormField k="sessionEnd" htmlFor="ses-end" col={6} required error={fieldErrors.endDate}>
             <AppDateInput
               id="ses-end"
               lng={lng}

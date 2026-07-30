@@ -8,6 +8,7 @@ import { formatCnicDisplay, trimFormStrings } from '../shared/pkValidation'
 import {
   useFormValidation,
   compose,
+  required,
   cnic,
   phone,
   notFutureDate,
@@ -44,6 +45,8 @@ const emptyLoc = () => ({ ur: '', en: '' })
 
 const TEACHER_FIELD_IDS = {
   'name.ur': 't-name-ur',
+  gender: 't-gender',
+  parentage: 't-par',
   phone: 't-phone',
   idCard: 't-id',
   dateOfBirth: 't-dob',
@@ -56,9 +59,16 @@ const teacherSchema = {
     if (!ur && !en) return t('validation.teacherNameRequired')
     return ''
   },
-  phone: compose(phone()),
-  idCard: compose(cnic()),
-  dateOfBirth: compose(notFutureDate()),
+  gender: required('validation.genderRequired'),
+  parentage: (_value, values, t) => {
+    const ur = String(values?.parentage?.ur || '').trim()
+    const en = String(values?.parentage?.en || '').trim()
+    if (!ur && !en) return t('validation.parentageRequired')
+    return ''
+  },
+  phone: compose(required('validation.phoneRequired'), phone()),
+  idCard: compose(required('validation.cnicRequired'), cnic()),
+  dateOfBirth: compose(required('validation.dobRequired'), notFutureDate()),
 }
 
 function refId(v) {
@@ -81,6 +91,7 @@ function defaultForm() {
   return {
     name: emptyLoc(),
     parentage: emptyLoc(),
+    gender: '',
     idCard: '',
     phone: '',
     maritalStatus: '',
@@ -131,7 +142,7 @@ export default function TeacherFormPage() {
     schema: teacherSchema,
     t,
     fieldIds: TEACHER_FIELD_IDS,
-    order: ['name.ur', 'phone', 'idCard', 'dateOfBirth'],
+    order: ['name.ur', 'gender', 'parentage', 'phone', 'idCard', 'dateOfBirth'],
   })
   const setForm = useCallback(
     (next) => {
@@ -436,20 +447,48 @@ export default function TeacherFormPage() {
                   onChange={(e) => setForm({ ...form, name: { ...(form.name || emptyLoc()), en: e.target.value } })}
                 />
               </FormField>
-              <FormField k="teacherWalidiyat" htmlFor="t-par" col={4}>
+              <FormField k="gender" htmlFor="t-gender" col={4} required error={fieldErrors.gender}>
+                <AppSelect
+                  id="t-gender"
+                  value={form.gender || ''}
+                  onValueChange={(v) => {
+                    const next = { ...form, gender: v }
+                    setForm(next)
+                    revalidateIfError('gender', next)
+                  }}
+                  onBlur={() => onBlurField('gender', form)}
+                >
+                  <option value="">—</option>
+                  <option value="male">{lng === 'ur' ? 'مرد' : 'Male'}</option>
+                  <option value="female">{lng === 'ur' ? 'عورت' : 'Female'}</option>
+                </AppSelect>
+              </FormField>
+              <FormField
+                k="teacherWalidiyat"
+                htmlFor="t-par"
+                col={4}
+                required
+                error={fieldErrors.parentage}
+              >
                 <AppInput
                   id="t-par"
                   value={loc(form.parentage || emptyLoc(), lng)}
-                  onChange={(e) =>
-                    setForm({
+                  onChange={(e) => {
+                    const next = {
                       ...form,
-                      parentage: lng === 'ur' ? { ...(form.parentage || emptyLoc()), ur: e.target.value } : { ...(form.parentage || emptyLoc()), en: e.target.value },
-                    })
-                  }
+                      parentage:
+                        lng === 'ur'
+                          ? { ...(form.parentage || emptyLoc()), ur: e.target.value }
+                          : { ...(form.parentage || emptyLoc()), en: e.target.value },
+                    }
+                    setForm(next)
+                    revalidateIfError('parentage', next)
+                  }}
+                  onBlur={() => onBlurField('parentage', form)}
                   dir={lng === 'ur' ? 'rtl' : undefined}
                 />
               </FormField>
-              <FormField k="idCard" htmlFor="t-id" col={4} error={fieldErrors.idCard}>
+              <FormField k="idCard" htmlFor="t-id" col={4} required error={fieldErrors.idCard}>
                 <AppInput
                   id="t-id"
                   latin
@@ -459,7 +498,7 @@ export default function TeacherFormPage() {
                   onBlur={() => onBlurField('idCard', form)}
                 />
               </FormField>
-              <FormField k="dateOfBirth" htmlFor="t-dob" col={4} error={fieldErrors.dateOfBirth}>
+              <FormField k="dateOfBirth" htmlFor="t-dob" col={4} required error={fieldErrors.dateOfBirth}>
                 <AppDateInput
                   id="t-dob"
                   lng={lng}
@@ -482,7 +521,7 @@ export default function TeacherFormPage() {
                   <option value="divorced">{lng === 'ur' ? 'طلاق یافتہ' : 'Divorced'}</option>
                 </AppSelect>
               </FormField>
-              <FormField k="phone" htmlFor="t-phone" col={4} error={fieldErrors.phone}>
+              <FormField k="phone" htmlFor="t-phone" col={4} required error={fieldErrors.phone}>
                 <AppInput
                   id="t-phone"
                   latin

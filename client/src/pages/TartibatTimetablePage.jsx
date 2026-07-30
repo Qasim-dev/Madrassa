@@ -579,17 +579,17 @@ export default function TartibatTimetablePage() {
                                       </div>
                                       <div className="text-muted small">{loc(ent.darjahId?.name, lng)}</div>
                                       <div className="small">{loc(ent.teacherId?.name, lng)}</div>
-                                      <div className="d-flex gap-1 flex-wrap mt-1">
+                                      <div className="tt-card__actions mt-1">
                                         <button
                                           type="button"
-                                          className="btn btn-link btn-sm p-0 small"
+                                          className="btn btn-outline-primary btn-sm"
                                           onClick={() => openEntryModal({ day: d.id, slotId: slot._id, entry: ent })}
                                         >
                                           {t('common.edit')}
                                         </button>
                                         <button
                                           type="button"
-                                          className="btn btn-link btn-sm p-0 small text-danger"
+                                          className="btn btn-outline-danger btn-sm"
                                           onClick={() => setEntryPendingDelete({ entry: ent })}
                                         >
                                           {t('common.delete')}

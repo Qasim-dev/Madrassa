@@ -125,7 +125,13 @@ router.post('/', (req, res, next) => {
   try {
     const parsed = parseSpeechBody(req.body, req.files);
     if (!parsed.title.ur && !parsed.title.en) {
-      return res.status(400).json({ message: 'Title is required' });
+      return res.status(400).json({ message: 'Title is required', fields: { 'title.ur': 'Title is required' } });
+    }
+    if (!parsed.speaker.ur && !parsed.speaker.en) {
+      return res.status(400).json({ message: 'Speaker is required', fields: { 'speaker.ur': 'Speaker is required' } });
+    }
+    if (!parsed.speechDate) {
+      return res.status(400).json({ message: 'Date is required', fields: { speechDate: 'Date is required' } });
     }
 
     const doc = await SpeechSummary.create({
@@ -170,6 +176,18 @@ router.put('/:id', (req, res, next) => {
       existing.summary = parsed.summary;
     }
     if (req.body.speechDate !== undefined) existing.speechDate = parsed.speechDate;
+
+    const title = existing.title || {}
+    if (!title.ur && !title.en) {
+      return res.status(400).json({ message: 'Title is required', fields: { 'title.ur': 'Title is required' } });
+    }
+    const speaker = existing.speaker || {}
+    if (!speaker.ur && !speaker.en) {
+      return res.status(400).json({ message: 'Speaker is required', fields: { 'speaker.ur': 'Speaker is required' } });
+    }
+    if (!existing.speechDate) {
+      return res.status(400).json({ message: 'Date is required', fields: { speechDate: 'Date is required' } });
+    }
     if (req.body.sessionId !== undefined) existing.sessionId = parsed.sessionId;
     if (req.body.teacherId !== undefined) existing.teacherId = parsed.teacherId;
     if (req.body.notes !== undefined) existing.notes = parsed.notes;

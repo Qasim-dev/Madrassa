@@ -88,11 +88,43 @@ router.get('/:id/summary', async (req, res, next) => {
 
 router.post('/', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
+    const title = String(req.body.title || '').trim();
+    if (!title) {
+      return res.status(400).json({
+        message: 'Session title is required.',
+        fields: { title: 'Session title is required.' },
+      });
+    }
+    if (!req.body.startDate) {
+      return res.status(400).json({
+        message: 'Start date is required.',
+        fields: { startDate: 'Start date is required.' },
+      });
+    }
+    if (!req.body.endDate) {
+      return res.status(400).json({
+        message: 'End date is required.',
+        fields: { endDate: 'End date is required.' },
+      });
+    }
+    const start = new Date(req.body.startDate);
+    const end = new Date(req.body.endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+      return res.status(400).json({
+        message: 'End date must be on or after the start date.',
+        fields: { endDate: 'End date must be on or after the start date.' },
+      });
+    }
+
+    const existingCount = await Session.countDocuments({ tenantId: req.tenantId });
+    let isActive = !!req.body.isActive;
+    if (existingCount === 0) isActive = true;
+
     const payload = {
-      title: String(req.body.title || '').trim(),
-      startDate: req.body.startDate ? new Date(req.body.startDate) : null,
-      endDate: req.body.endDate ? new Date(req.body.endDate) : null,
-      isActive: !!req.body.isActive,
+      title,
+      startDate: start,
+      endDate: end,
+      isActive,
       tenantId: req.tenantId,
     };
     const doc = await Session.create(payload);
@@ -105,18 +137,64 @@ router.post('/', requirePermission('tartibat:write'), async (req, res, next) => 
 
 router.put('/:id', requirePermission('tartibat:write'), async (req, res, next) => {
   try {
+    const existing = await Session.findOne({ _id: req.params.id, tenantId: req.tenantId });
+    if (!existing) return res.status(404).json({ message: 'Not found' });
+
+    const nextStart =
+      req.body.startDate !== undefined
+        ? req.body.startDate
+          ? new Date(req.body.startDate)
+          : null
+        : existing.startDate;
+    const nextEnd =
+      req.body.endDate !== undefined
+        ? req.body.endDate
+          ? new Date(req.body.endDate)
+          : null
+        : existing.endDate;
+
+    if (!nextStart) {
+      return res.status(400).json({
+        message: 'Start date is required.',
+        fields: { startDate: 'Start date is required.' },
+      });
+    }
+    if (!nextEnd) {
+      return res.status(400).json({
+        message: 'End date is required.',
+        fields: { endDate: 'End date is required.' },
+      });
+    }
+    if (nextEnd < nextStart) {
+      return res.status(400).json({
+        message: 'End date must be on or after the start date.',
+        fields: { endDate: 'End date must be on or after the start date.' },
+      });
+    }
+
+    let nextActive = req.body.isActive !== undefined ? !!req.body.isActive : !!existing.isActive;
+    if (!nextActive) {
+      const otherActive = await Session.countDocuments({
+        tenantId: req.tenantId,
+        isActive: true,
+        _id: { $ne: existing._id },
+      });
+      if (otherActive === 0) {
+        return res.status(400).json({
+          message: 'At least one session must remain active.',
+          fields: { isActive: 'At least one session must remain active.' },
+        });
+      }
+    }
+
     const doc = await Session.findOneAndUpdate(
       { _id: req.params.id, tenantId: req.tenantId },
       {
         $set: {
           ...(req.body.title !== undefined ? { title: String(req.body.title || '').trim() } : {}),
-          ...(req.body.startDate !== undefined
-            ? { startDate: req.body.startDate ? new Date(req.body.startDate) : null }
-            : {}),
-          ...(req.body.endDate !== undefined
-            ? { endDate: req.body.endDate ? new Date(req.body.endDate) : null }
-            : {}),
-          ...(req.body.isActive !== undefined ? { isActive: !!req.body.isActive } : {}),
+          startDate: nextStart,
+          endDate: nextEnd,
+          isActive: nextActive,
         },
       },
       { new: true, runValidators: true }
@@ -173,7 +251,17 @@ router.delete('/:id', requirePermission('tartibat:delete'), async (req, res, nex
     ]);
 
     // Finally delete the session itself
+    const wasActive = !!doc.isActive;
     await Session.deleteOne({ _id: id, tenantId });
+
+    if (wasActive) {
+      const next = await Session.findOne({ tenantId }).sort({ createdAt: -1 });
+      if (next) {
+        next.isActive = true;
+        await next.save();
+        await deactivateOtherSessions(tenantId, next._id);
+      }
+    }
 
     res.json({ ok: true });
   } catch (e) {
